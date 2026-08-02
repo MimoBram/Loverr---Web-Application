@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Delete } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const PIN_LENGTH = 6;
@@ -15,6 +16,7 @@ function MasukkanPinInner() {
   const searchParams = useSearchParams();
   const profileId = searchParams.get("profile");
   const { profiles, setActiveProfileId, verifyPin, bootstrapError } = useSession();
+  const t = useT();
 
   const profile = profiles.find((p) => p.id === profileId);
   const [pin, setPin] = useState("");
@@ -49,13 +51,13 @@ function MasukkanPinInner() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-cream px-6 text-center">
         <p className="text-body-medium text-muted">
-          Profil tidak ditemukan.
+          {t("masukkanPin.notFound")}
         </p>
         <button
           onClick={() => router.push("/pilih-profil")}
           className="text-label text-rose"
         >
-          Kembali ke Pilih Profil
+          {t("masukkanPin.backToPilihProfil")}
         </button>
       </main>
     );
@@ -65,13 +67,15 @@ function MasukkanPinInner() {
     <main className="flex min-h-screen flex-col items-center gap-8 bg-cream px-6 pt-16">
       <div className="flex flex-col items-center gap-3">
         <Avatar avatarKey={profile.avatar_key} name={profile.display_name} size="lg" />
-        <h1 className="text-heading text-ink">Hai, {profile.display_name}</h1>
-        <p className="text-body-medium text-muted">Masukkan PIN kamu</p>
+        <h1 className="text-heading text-ink">
+          {t("masukkanPin.greeting", { name: profile.display_name })}
+        </h1>
+        <p className="text-body-medium text-muted">{t("masukkanPin.subtitle")}</p>
       </div>
 
       {bootstrapError && (
         <p className="max-w-[300px] text-center text-caption text-error">
-          Akun bersama gagal disiapkan: {bootstrapError}
+          {t("masukkanPin.bootstrapError", { message: bootstrapError })}
         </p>
       )}
 
@@ -92,7 +96,7 @@ function MasukkanPinInner() {
       </div>
       {error && (
         <p className="-mt-4 text-caption text-error">
-          PIN salah, coba lagi.
+          {t("masukkanPin.wrong")}
         </p>
       )}
 
@@ -104,7 +108,7 @@ function MasukkanPinInner() {
             <button
               key={i}
               onClick={() => handleKey(key)}
-              aria-label="Hapus"
+              aria-label={t("common.delete")}
               className="flex h-16 w-16 items-center justify-center rounded-full text-ink active:bg-surface"
             >
               <Delete size={22} />

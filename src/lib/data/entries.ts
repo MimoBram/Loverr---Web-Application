@@ -53,6 +53,8 @@ export interface CreateEntryInput {
   caption: string | null;
   photo_path: string | null;
   entry_date: string;
+  tags?: string[];
+  mood?: string | null;
 }
 
 export async function createEntry(input: CreateEntryInput): Promise<ScrapbookEntry> {
@@ -69,6 +71,9 @@ export async function createEntry(input: CreateEntryInput): Promise<ScrapbookEnt
       caption: input.caption,
       photo_path: input.photo_path,
       entry_date: input.entry_date,
+      tags: input.tags ?? [],
+      mood: input.mood ?? null,
+      is_favorite: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -80,6 +85,67 @@ export async function createEntry(input: CreateEntryInput): Promise<ScrapbookEnt
   const { data, error } = await supabase
     .from("scrapbook_entries")
     .insert({ ...input, couple_id: coupleId })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export interface UpdateEntryInput {
+  title: string;
+  caption: string | null;
+  photo_path: string | null;
+  entry_date: string;
+  tags?: string[];
+  mood?: string | null;
+}
+
+export async function updateEntry(
+  id: string,
+  input: UpdateEntryInput,
+): Promise<ScrapbookEntry> {
+  if (!isSupabaseConfigured) {
+    const idx = MOCK_ENTRIES.findIndex((e) => e.id === id);
+    if (idx === -1) throw new Error("Kenangan tidak ditemukan.");
+    MOCK_ENTRIES[idx] = {
+      ...MOCK_ENTRIES[idx],
+      ...input,
+      tags: input.tags ?? MOCK_ENTRIES[idx].tags,
+      mood: input.mood !== undefined ? input.mood : MOCK_ENTRIES[idx].mood,
+      updated_at: new Date().toISOString(),
+    };
+    return MOCK_ENTRIES[idx];
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scrapbook_entries")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function setEntryFavorite(
+  id: string,
+  isFavorite: boolean,
+): Promise<ScrapbookEntry> {
+  if (!isSupabaseConfigured) {
+    const idx = MOCK_ENTRIES.findIndex((e) => e.id === id);
+    if (idx === -1) throw new Error("Kenangan tidak ditemukan.");
+    MOCK_ENTRIES[idx] = { ...MOCK_ENTRIES[idx], is_favorite: isFavorite };
+    return MOCK_ENTRIES[idx];
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("scrapbook_entries")
+    .update({ is_favorite: isFavorite })
+    .eq("id", id)
     .select()
     .single();
 

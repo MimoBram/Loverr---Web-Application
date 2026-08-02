@@ -13,7 +13,7 @@ const colorClasses: Record<BadgeColor, string> = {
   violet: "bg-violet text-white",
   periwinkle: "bg-periwinkle text-white",
   cream: "bg-cream text-ink",
-  white: "bg-white text-ink",
+  white: "bg-card text-ink",
 };
 
 /**

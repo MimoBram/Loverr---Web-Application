@@ -12,7 +12,7 @@ const colorClasses: Record<CardColor, string> = {
   violet: "bg-violet",
   periwinkle: "bg-periwinkle",
   surface: "bg-surface",
-  white: "bg-white",
+  white: "bg-card",
 };
 
 /**
@@ -50,12 +50,18 @@ export function CardTitle({
   );
 }
 
-/** Secondary/meta text on a bright card — always Ink, never white. */
+/**
+ * Secondary/meta text on a bright card — always dark, never white or
+ * theme-adaptive. Pinned to the static `onyx` token (not `ink`) because
+ * bright cards (coral/violet/periwinkle) don't change color in dark mode,
+ * so the text sitting on them can't either without breaking the contrast
+ * fix noted above.
+ */
 export function CardMeta({
   className,
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-caption text-ink", className)} {...props} />;
+  return <p className={cn("text-caption text-onyx", className)} {...props} />;
 }
 
 /** Body copy on a neutral (surface/white) card — Ink by default. */

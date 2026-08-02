@@ -4,13 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, BookHeart, MessageCircleHeart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NAV_ITEMS = [
-  { href: "/home", label: "Home", icon: Home },
-  { href: "/timeline", label: "Scrapbook", icon: BookHeart },
-  { href: "/notes", label: "Notes", icon: MessageCircleHeart },
-  { href: "/profile", label: "Profil", icon: User },
-] as const;
+import { useT } from "@/lib/i18n";
 
 /**
  * Floating icon-only bottom nav — matches the Figma "black pill" nav bar
@@ -20,10 +14,18 @@ const NAV_ITEMS = [
  */
 export function BottomNav() {
   const pathname = usePathname();
+  const t = useT();
+
+  const NAV_ITEMS = [
+    { href: "/home", label: "Home", icon: Home },
+    { href: "/timeline", label: "Scrapbook", icon: BookHeart },
+    { href: "/notes", label: "Notes", icon: MessageCircleHeart },
+    { href: "/profile", label: t("nav.profile"), icon: User },
+  ] as const;
 
   return (
     <nav className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-32px)] max-w-[343px] -translate-x-1/2">
-      <ul className="flex h-[76px] items-center justify-around rounded-[38px] bg-ink px-3 shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)]">
+      <ul className="flex h-[76px] items-center justify-around rounded-[38px] bg-onyx px-3 shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)]">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname?.startsWith(`${href}/`);
           return (
@@ -42,7 +44,7 @@ export function BottomNav() {
                 >
                   <Icon
                     size={22}
-                    className={active ? "text-ink" : "text-white/60"}
+                    className={active ? "text-onyx" : "text-white/60"}
                     strokeWidth={active ? 2.5 : 2}
                   />
                 </span>

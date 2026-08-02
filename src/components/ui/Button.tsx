@@ -39,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           variant === "primary" &&
             "bg-rose text-white hover:bg-rose-deep disabled:bg-disabled disabled:text-white",
           variant === "secondary" &&
-            "border-2 border-rose bg-white text-rose hover:bg-cream disabled:border-disabled disabled:text-disabled",
+            "border-2 border-rose bg-card text-rose hover:bg-cream disabled:border-disabled disabled:text-disabled",
           variant === "ghost" &&
             "bg-transparent text-rose hover:bg-cream disabled:text-disabled",
           variant === "danger" &&

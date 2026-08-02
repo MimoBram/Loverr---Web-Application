@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WifiOff } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
  * Thin banner shown whenever the browser goes offline. The app's data
@@ -11,6 +12,7 @@ import { WifiOff } from "lucide-react";
  * silent stuck loading/error state.
  */
 export function OfflineBanner() {
+  const t = useT();
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export function OfflineBanner() {
   if (!isOffline) return null;
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-ink px-4 py-2 text-caption text-white">
+    <div className="flex items-center justify-center gap-2 bg-onyx px-4 py-2 text-caption text-white">
       <WifiOff size={14} />
-      Kamu sedang offline. Beberapa data mungkin tidak terbaru.
+      {t("common.offline")}
     </div>
   );
 }

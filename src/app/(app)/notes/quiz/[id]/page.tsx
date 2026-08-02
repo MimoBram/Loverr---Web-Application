@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, RotateCcw, Flag, LogOut } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { getQuestion, listQuestions, listAnswers, submitAnswer } from "@/lib/data/quiz";
+import { createNotification } from "@/lib/data/notifications";
 import { QUIZ_CATEGORIES } from "@/lib/mock-data";
 import { QuizMascot } from "@/components/ui/QuizMascot";
+import { ActionSheet, type ActionSheetItem } from "@/components/ui/ActionSheet";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { QuizQuestion, QuizAnswer } from "@/lib/supabase/types";
 
 /** Quiz Interaction — matches Figma node 171:32. */
@@ -15,6 +18,7 @@ export default function QuizQuestionPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { activeProfileId } = useSession();
+  const t = useT();
 
   const [question, setQuestion] = useState<QuizQuestion | null | undefined>(undefined);
   const [allQuestions, setAllQuestions] = useState<QuizQuestion[]>([]);
@@ -22,6 +26,8 @@ export default function QuizQuestionPage() {
   const [answerText, setAnswerText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const load = useCallback(async () => {
     const [q, all] = await Promise.all([getQuestion(params.id), listQuestions()]);
@@ -51,16 +57,17 @@ export default function QuizQuestionPage() {
   const progressPct = total > 0 ? Math.round(((questionIndex + 1) / total) * 100) : 0;
 
   useEffect(() => {
+    if (retrying) return;
     const myAnswer = answers.find((a) => a.profile_id === activeProfileId);
     if (myAnswer && answers.length >= 2) {
       router.replace(`/notes/quiz/${params.id}/result`);
     }
-  }, [answers, activeProfileId, params.id, router]);
+  }, [answers, activeProfileId, params.id, router, retrying]);
 
   if (question === undefined) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-body-medium text-muted">Memuat pertanyaan…</p>
+        <p className="text-body-medium text-muted">{t("quiz.loading")}</p>
       </main>
     );
   }
@@ -68,9 +75,9 @@ export default function QuizQuestionPage() {
   if (!question || !activeProfileId) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-body-medium text-muted">Pertanyaan tidak ditemukan.</p>
+        <p className="text-body-medium text-muted">{t("quiz.notFound")}</p>
         <button onClick={() => router.push("/notes/quiz")} className="text-label text-rose">
-          Kembali ke Quiz
+          {t("quiz.backToQuiz")}
         </button>
       </main>
     );
@@ -85,45 +92,114 @@ export default function QuizQuestionPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const partnerAlreadyAnswered = answers.some(
+        (a) => a.profile_id !== activeProfileId,
+      );
+
       await submitAnswer({
         question_id: question!.id,
         profile_id: activeProfileId,
         answer_text: answerText.trim(),
       });
+
+      if (partnerAlreadyAnswered) {
+        createNotification({
+          type: "quiz_result_ready",
+          title: t("quiz.resultReadyTitle"),
+          body: t("quiz.resultReadyBody", { question: question!.question_text }),
+        }).catch(() => {
+          // Non-critical — the answer itself already saved successfully.
+        });
+      }
+
+      setRetrying(false);
       await load();
     } catch {
-      setError("Gagal mengirim jawaban. Coba lagi.");
+      setError(t("quiz.error"));
       setSubmitting(false);
     }
   }
+
+  function handleRetry() {
+    setOptionsOpen(false);
+    setAnswerText(myAnswer?.answer_text ?? "");
+    setError(null);
+    setRetrying(true);
+  }
+
+  function handleReport() {
+    setOptionsOpen(false);
+    const subject = encodeURIComponent("Laporkan Soal Quiz");
+    const body = encodeURIComponent(
+      `Soal: "${question?.question_text}"\n\nCeritakan masalahnya di sini...`,
+    );
+    window.location.href = `mailto:bimoadi.bramantyo@gmail.com?subject=${subject}&body=${body}`;
+  }
+
+  const quizOptions: ActionSheetItem[] = [
+    ...(myAnswer
+      ? [
+          {
+            key: "retry",
+            label: t("quiz.retry"),
+            icon: RotateCcw,
+            iconBg: "bg-coral",
+            onClick: handleRetry,
+          } as ActionSheetItem,
+        ]
+      : []),
+    {
+      key: "report",
+      label: t("quiz.report"),
+      icon: Flag,
+      iconBg: "bg-ink",
+      onClick: handleReport,
+    },
+    {
+      key: "exit",
+      label: t("quiz.exit"),
+      icon: LogOut,
+      iconBg: "bg-error",
+      labelClassName: "text-error",
+      onClick: () => {
+        setOptionsOpen(false);
+        router.push("/notes/quiz");
+      },
+    },
+  ];
 
   return (
     <main className="flex min-h-screen flex-col gap-6 bg-quiz-accent px-5 pb-10 pt-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/notes/quiz")}
-          aria-label="Kembali"
+          aria-label={t("common.back")}
           className="flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
         >
           <ChevronLeft size={22} className="text-ink" />
         </button>
         <div className="flex h-[52px] items-center justify-center rounded-pill bg-white px-6 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
           <p className="text-[13.5px] font-extrabold text-ink">
-            Soal {questionIndex >= 0 ? questionIndex + 1 : 1}/{total || 1}
+            {t("quiz.soal", { current: questionIndex >= 0 ? questionIndex + 1 : 1, total: total || 1 })}
           </p>
         </div>
-        <div className="flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+        <button
+          type="button"
+          aria-label={t("quiz.opsiKuis")}
+          onClick={() => setOptionsOpen(true)}
+          className="flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
+        >
           <div className="flex gap-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-ink" />
             <span className="h-1.5 w-1.5 rounded-full bg-ink" />
             <span className="h-1.5 w-1.5 rounded-full bg-ink" />
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <p className="text-[14px] font-bold text-ink">Progress</p>
+          <p className="text-[14px] font-bold text-ink">{t("quiz.progress")}</p>
           <p className="text-[14px] font-bold text-ink">{progressPct}%</p>
         </div>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white">
@@ -155,13 +231,18 @@ export default function QuizQuestionPage() {
         {question.question_text}
       </h2>
 
-      {!myAnswer ? (
+      {!myAnswer || retrying ? (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {retrying && (
+            <p className="text-caption text-subtle">
+              {t("quiz.retryingNote")}
+            </p>
+          )}
           <div className="relative">
             <input
               autoFocus
               type="text"
-              placeholder="Tulis jawabanmu..."
+              placeholder={t("quiz.answerPlaceholder")}
               value={answerText}
               onChange={(e) => setAnswerText(e.target.value)}
               className="h-[58px] w-full rounded-pill bg-white pl-6 pr-16 text-body text-ink placeholder:text-subtle shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)] focus:outline-none"
@@ -176,29 +257,43 @@ export default function QuizQuestionPage() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => router.push("/notes/quiz")}
+              onClick={() => {
+                if (retrying) {
+                  setRetrying(false);
+                  setError(null);
+                } else {
+                  router.push("/notes/quiz");
+                }
+              }}
               className="flex h-[58px] flex-1 items-center justify-center gap-1 rounded-pill bg-white text-[13.5px] font-bold text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"
             >
-              Lewati
+              {retrying ? t("quiz.cancel") : t("quiz.skip")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="flex h-[58px] flex-1 items-center justify-center gap-1 rounded-pill bg-ink text-[13.5px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
             >
-              {submitting ? "Mengirim…" : "Kirim"}
+              {submitting ? t("quiz.sending") : t("quiz.send")}
               {!submitting && <ChevronRight size={16} />}
             </button>
           </div>
         </form>
       ) : (
         <div className="flex flex-col items-center gap-2 rounded-card-lg bg-white p-6 text-center shadow-sm">
-          <p className="text-card-title text-ink">Jawabanmu terkirim!</p>
+          <p className="text-card-title text-ink">{t("quiz.submitted")}</p>
           <p className="text-body-medium text-muted">
-            Menunggu pasanganmu menjawab juga — hasilnya akan muncul di sini.
+            {t("quiz.waitingPartner")}
           </p>
         </div>
       )}
+
+      <ActionSheet
+        open={optionsOpen}
+        title={t("quiz.opsiKuis")}
+        items={quizOptions}
+        onClose={() => setOptionsOpen(false)}
+      />
     </main>
   );
 }

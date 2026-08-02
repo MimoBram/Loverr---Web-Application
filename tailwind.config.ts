@@ -8,15 +8,32 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        cream: "#fcf7f0",
+        // Theme-reactive neutrals — actual values are CSS custom properties
+        // defined in globals.css (:root = light, .dark = dark). This means
+        // every existing `bg-cream`, `text-ink`, `border-divider`, etc.
+        // across the whole app automatically adapts to dark mode with zero
+        // per-screen changes — only the two overloaded tokens (`ink` and
+        // `white` used as *solid brand-black chrome* rather than *adaptive
+        // text/surface*) needed to be split out into the static `onyx`
+        // token below.
+        cream: "var(--color-cream)",
+        surface: "var(--color-surface)",
+        card: "var(--color-card)",
+        ink: "var(--color-ink)",
+        muted: "var(--color-muted)",
+        subtle: "var(--color-subtle)",
+        "input-stroke": "var(--color-input-stroke)",
+        divider: "var(--color-divider)",
+        disabled: "var(--color-disabled)",
+        // Static (non-theme-reactive) colors — brand accents and solid
+        // black UI chrome (nav bar, primary buttons, icon badges, scrims)
+        // that should look identical in light and dark mode.
         white: "#ffffff",
-        surface: "#f2f0f2",
-        ink: "#1a171c",
-        muted: "#6b676b",
-        subtle: "#796f76",
+        onyx: "#1a171c",
         rose: "#d62e45",
         "rose-deep": "#9e384d",
         "soft-pink": "#ed8ca8",
@@ -24,9 +41,6 @@ const config: Config = {
         violet: "#9e7ad9",
         periwinkle: "#808de3",
         error: "#c64343",
-        "input-stroke": "#e5e0e5",
-        divider: "#edeae6",
-        disabled: "#c9c3bc",
         // quiz-specific accent (lighter warm peach used only on Quiz Interaction)
         "quiz-accent": "#ed8f66",
         "quiz-mascot-brown": "#a8634d",

@@ -1,32 +1,38 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Plus, Calendar, X } from "lucide-react";
 import { useSession } from "@/lib/session";
-import { createEntry, uploadEntryPhoto } from "@/lib/data/entries";
+import { createEntry, updateEntry, uploadEntryPhoto, getEntry } from "@/lib/data/entries";
+import { createNotification } from "@/lib/data/notifications";
 import { resolveCoupleId } from "@/lib/data/auth";
+import { MOODS } from "@/lib/moods";
 import { cn } from "@/lib/utils";
+import { useT, useLanguage } from "@/lib/i18n";
 
 const PRESET_TAGS = ["Liburan", "Momen Spesial", "Harian", "Kejutan"];
-const MOODS = [
-  { key: "senang", emoji: "😊", color: "bg-coral" },
-  { key: "santai", emoji: "😌", color: "bg-violet" },
-  { key: "seru", emoji: "😉", color: "bg-[#b08a3e]" },
-  { key: "sayang", emoji: "🩷", color: "bg-periwinkle" },
-];
 
-function deriveTitle(caption: string) {
-  const firstLine = caption.split("\n")[0].trim();
-  if (!firstLine) return "Kenangan baru";
-  return firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
-}
-
-/** New Entry — matches Figma node 169:3. */
-export default function NewEntryPage() {
+/**
+ * New Entry — matches Figma node 169:3.
+ * Also doubles as the Edit screen (Entry Detail's "Edit" button links here
+ * with `?edit=<id>`) — same form, prefilled from the existing entry, saving
+ * via `updateEntry` instead of `createEntry`.
+ */
+function NewEntryInner() {
   const router = useRouter();
-  const { activeProfileId } = useSession();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const { activeProfileId, profiles } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const t = useT();
+  const { lang } = useLanguage();
+
+  function deriveTitle(caption: string) {
+    const firstLine = caption.split("\n")[0].trim();
+    if (!firstLine) return t("newEntry.defaultTitle");
+    return firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
+  }
 
   const [caption, setCaption] = useState("");
   const [entryDate, setEntryDate] = useState(
@@ -40,8 +46,42 @@ export default function NewEntryPage() {
   const [mood, setMood] = useState<string | null>("senang");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [existingPhotoPath, setExistingPhotoPath] = useState<string | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(editId));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+
+    getEntry(editId)
+      .then((entry) => {
+        if (cancelled) return;
+        if (entry) {
+          setCaption(entry.caption ?? "");
+          setEntryDate(entry.entry_date);
+          setExistingPhotoPath(entry.photo_path);
+          setSelectedTags(entry.tags ?? []);
+          setVisibleTags((prev) => {
+            const merged = [...prev];
+            for (const tag of entry.tags ?? []) {
+              if (!merged.includes(tag)) merged.push(tag);
+            }
+            return merged;
+          });
+          setMood(entry.mood ?? null);
+        }
+        setLoadingExisting(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingExisting(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) =>
@@ -65,11 +105,12 @@ export default function NewEntryPage() {
     e.stopPropagation();
     setPhotoFile(null);
     setPhotoPreview(null);
+    setExistingPhotoPath(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function formatDateLabel(iso: string) {
-    return new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
+    return new Date(`${iso}T00:00:00`).toLocaleDateString(lang === "en" ? "en-US" : "id-ID", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -85,29 +126,67 @@ export default function NewEntryPage() {
 
     try {
       const coupleId = await resolveCoupleId();
-      const entryId = `entry-${Date.now()}`;
+      const entryId = editId ?? `entry-${Date.now()}`;
+      const title = deriveTitle(caption);
 
-      let photoPath: string | null = null;
+      let photoPath = existingPhotoPath;
       if (photoFile) {
         photoPath = await uploadEntryPhoto(photoFile, coupleId, entryId);
       }
 
-      await createEntry({
-        id: entryId,
-        couple_id: coupleId,
-        author_profile_id: activeProfileId,
-        title: deriveTitle(caption),
-        caption: caption.trim() || null,
-        photo_path: photoPath,
-        entry_date: entryDate,
-      });
+      if (editId) {
+        await updateEntry(editId, {
+          title,
+          caption: caption.trim() || null,
+          photo_path: photoPath,
+          entry_date: entryDate,
+          tags: selectedTags,
+          mood,
+        });
+        router.push(`/timeline/${editId}`);
+      } else {
+        await createEntry({
+          id: entryId,
+          couple_id: coupleId,
+          author_profile_id: activeProfileId,
+          title,
+          caption: caption.trim() || null,
+          photo_path: photoPath,
+          entry_date: entryDate,
+          tags: selectedTags,
+          mood,
+        });
 
-      router.push("/timeline");
+        const author = profiles.find((p) => p.id === activeProfileId);
+        createNotification({
+          type: "new_entry",
+          title: t("newEntry.notifTitle"),
+          body: t("newEntry.notifBody", {
+            name: author?.display_name ?? t("newEntry.someone"),
+            title,
+          }),
+          related_entry_id: entryId,
+        }).catch(() => {
+          // Non-critical — the entry itself already saved successfully.
+        });
+
+        router.push("/timeline");
+      }
     } catch {
-      setError("Gagal menyimpan kenangan. Coba lagi.");
+      setError(t("newEntry.error"));
       setSaving(false);
     }
   }
+
+  if (loadingExisting) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-body-medium text-muted">{t("newEntry.loading")}</p>
+      </main>
+    );
+  }
+
+  const displayPhoto = photoPreview ?? existingPhotoPath;
 
   return (
     <form
@@ -118,12 +197,14 @@ export default function NewEntryPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Kembali"
+          aria-label={t("common.back")}
           className="absolute left-0 flex h-11 w-11 items-center justify-center text-ink"
         >
           <ChevronLeft size={26} />
         </button>
-        <h1 className="text-[20px] font-extrabold text-ink">Entri Baru</h1>
+        <h1 className="text-[20px] font-extrabold text-ink">
+          {editId ? t("newEntry.titleEdit") : t("newEntry.titleNew")}
+        </h1>
       </div>
 
       <input
@@ -137,21 +218,21 @@ export default function NewEntryPage() {
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="relative flex h-[200px] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-[28px] border-2 border-dashed border-ink bg-white"
+        className="relative flex h-[200px] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-[28px] border-2 border-dashed border-ink bg-card"
       >
-        {photoPreview ? (
+        {displayPhoto ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={photoPreview}
-              alt="Pratinjau foto"
+              src={displayPhoto}
+              alt={t("newEntry.photoPreviewAlt")}
               className="absolute inset-0 h-full w-full object-cover"
             />
             <span
               onClick={removePhoto}
               role="button"
-              aria-label="Hapus foto"
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-ink/60 text-white"
+              aria-label={t("newEntry.removePhoto")}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-onyx/60 text-white"
             >
               <X size={16} />
             </span>
@@ -160,25 +241,25 @@ export default function NewEntryPage() {
           <>
             <div className="h-[37.4px] w-[68px] rounded-[8px] border-[2.2px] border-ink" />
             <p className="text-[13px] font-semibold text-muted">
-              Ketuk untuk tambah foto
+              {t("newEntry.tapPhoto")}
             </p>
           </>
         )}
       </button>
 
       <div className="flex flex-col gap-3">
-        <p className="text-[13.5px] font-bold text-subtle">CERITA SINGKAT</p>
+        <p className="text-[13.5px] font-bold text-subtle">{t("newEntry.storyLabel")}</p>
         <textarea
           rows={4}
-          placeholder="Tulis cerita singkat tentang momen ini..."
+          placeholder={t("newEntry.storyPlaceholder")}
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          className="h-[100px] w-full rounded-input border-[1.5px] border-divider bg-white px-4 py-3 text-body text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)] placeholder:text-subtle focus:border-rose focus:outline-none"
+          className="h-[100px] w-full rounded-input border-[1.5px] border-divider bg-card px-4 py-3 text-body text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)] placeholder:text-subtle focus:border-rose focus:outline-none"
         />
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-[13.5px] font-bold text-subtle">TAG MOMEN</p>
+        <p className="text-[13.5px] font-bold text-subtle">{t("newEntry.tagsLabel")}</p>
         <div className="flex flex-wrap items-center gap-2">
           {visibleTags.map((tag) => (
             <button
@@ -188,8 +269,8 @@ export default function NewEntryPage() {
               className={cn(
                 "h-[38px] rounded-pill px-4 text-[13.5px] font-semibold",
                 selectedTags.includes(tag)
-                  ? "bg-ink text-white"
-                  : "border border-divider bg-white text-ink",
+                  ? "bg-onyx text-white"
+                  : "border border-divider bg-card text-ink",
               )}
             >
               {tag}
@@ -198,8 +279,8 @@ export default function NewEntryPage() {
           <button
             type="button"
             onClick={addMoreTags}
-            aria-label="Tambah tag"
-            className="flex h-[38px] w-[38px] items-center justify-center rounded-squircle border border-divider bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
+            aria-label={t("newEntry.addTag")}
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-squircle border border-divider bg-card shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
           >
             <Plus size={16} className="text-ink" />
           </button>
@@ -207,8 +288,8 @@ export default function NewEntryPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-[13.5px] font-bold text-subtle">TANGGAL</p>
-        <label className="relative flex h-[52px] w-full items-center gap-3 rounded-input border-[1.5px] border-divider bg-white px-4 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
+        <p className="text-[13.5px] font-bold text-subtle">{t("newEntry.dateLabel")}</p>
+        <label className="relative flex h-[52px] w-full items-center gap-3 rounded-input border-[1.5px] border-divider bg-card px-4 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
           <Calendar size={18} className="text-ink" />
           <span className="text-[13.5px] font-semibold text-ink">
             {formatDateLabel(entryDate)}
@@ -223,7 +304,7 @@ export default function NewEntryPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <p className="text-[13.5px] font-bold text-subtle">MOOD</p>
+        <p className="text-[13.5px] font-bold text-subtle">{t("newEntry.moodLabel")}</p>
         <div className="flex items-center gap-3">
           {MOODS.map((m) => (
             <button
@@ -248,10 +329,22 @@ export default function NewEntryPage() {
       <button
         type="submit"
         disabled={saving}
-        className="fixed bottom-6 left-5 right-5 mx-auto flex h-16 w-[calc(100%-40px)] max-w-[335px] items-center justify-center rounded-[32px] bg-ink text-[15px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
+        className="fixed bottom-6 left-5 right-5 mx-auto flex h-16 w-[calc(100%-40px)] max-w-[335px] items-center justify-center rounded-[32px] bg-onyx text-[15px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
       >
-        {saving ? "Menyimpan…" : "Simpan Entri"}
+        {saving
+          ? t("newEntry.saving")
+          : editId
+            ? t("newEntry.saveEdit")
+            : t("newEntry.saveNew")}
       </button>
     </form>
+  );
+}
+
+export default function NewEntryPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewEntryInner />
+    </Suspense>
   );
 }

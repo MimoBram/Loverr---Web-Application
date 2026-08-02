@@ -6,10 +6,12 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 
 export default function ChangePinPage() {
   const router = useRouter();
   const { activeProfileId, updatePin } = useSession();
+  const t = useT();
 
   const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -27,11 +29,11 @@ export default function ChangePinPage() {
 
     if (!activeProfileId) return;
     if (!isValidPin(newPin)) {
-      setError("PIN baru harus 6 digit angka.");
+      setError(t("changePin.errorLength"));
       return;
     }
     if (newPin !== confirmPin) {
-      setError("Konfirmasi PIN tidak cocok.");
+      setError(t("changePin.errorMismatch"));
       return;
     }
 
@@ -39,11 +41,11 @@ export default function ChangePinPage() {
     try {
       ok = await updatePin(activeProfileId, oldPin, newPin);
     } catch {
-      setError("Gagal mengganti PIN. Coba lagi.");
+      setError(t("changePin.errorGeneric"));
       return;
     }
     if (!ok) {
-      setError("PIN lama salah.");
+      setError(t("changePin.errorCurrent"));
       return;
     }
 
@@ -56,17 +58,17 @@ export default function ChangePinPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          aria-label="Kembali"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm"
+          aria-label={t("common.back")}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-sm"
         >
           <ArrowLeft size={20} className="text-ink" />
         </button>
-        <h1 className="text-heading text-ink">Ganti PIN</h1>
+        <h1 className="text-heading text-ink">{t("changePin.title")}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
-          label="PIN Lama"
+          label={t("changePin.currentLabel")}
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -74,7 +76,7 @@ export default function ChangePinPage() {
           onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ""))}
         />
         <Input
-          label="PIN Baru (6 digit)"
+          label={t("changePin.newLabel")}
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -82,7 +84,7 @@ export default function ChangePinPage() {
           onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
         />
         <Input
-          label="Konfirmasi PIN Baru"
+          label={t("changePin.confirmLabel")}
           type="password"
           inputMode="numeric"
           maxLength={6}
@@ -91,9 +93,9 @@ export default function ChangePinPage() {
         />
 
         {error && <p className="text-caption text-error">{error}</p>}
-        {saved && <p className="text-caption text-ink">PIN berhasil diganti!</p>}
+        {saved && <p className="text-caption text-ink">{t("changePin.saved")}</p>}
 
-        <Button type="submit">Simpan PIN Baru</Button>
+        <Button type="submit">{t("changePin.save")}</Button>
       </form>
     </main>
   );

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
 import { listQuestions, listAnswers } from "@/lib/data/quiz";
 import { QUIZ_CATEGORIES } from "@/lib/mock-data";
+import { useT } from "@/lib/i18n";
 import type { QuizQuestion, QuizAnswer } from "@/lib/supabase/types";
 
 type Status = "loading" | "ready" | "error";
@@ -15,6 +16,7 @@ type Status = "loading" | "ready" | "error";
 export default function QuizListPage() {
   const router = useRouter();
   const { activeProfileId } = useSession();
+  const t = useT();
   const [category, setCategory] = useState<string>(QUIZ_CATEGORIES[0]);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -63,12 +65,12 @@ export default function QuizListPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          aria-label="Kembali"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm"
+          aria-label={t("common.back")}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-sm"
         >
           <ArrowLeft size={20} className="text-ink" />
         </button>
-        <h1 className="text-heading text-ink">Quiz Mingguan</h1>
+        <h1 className="text-heading text-ink">{t("quizHub.title")}</h1>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -80,7 +82,7 @@ export default function QuizListPage() {
               "shrink-0 rounded-pill px-4 py-2 text-label capitalize transition-colors",
               category === c
                 ? "bg-rose text-white"
-                : "bg-white text-muted",
+                : "bg-card text-muted",
             )}
           >
             {c}
@@ -89,16 +91,16 @@ export default function QuizListPage() {
       </div>
 
       {status === "loading" && (
-        <p className="text-caption text-muted">Memuat pertanyaan…</p>
+        <p className="text-caption text-muted">{t("quizHub.loading")}</p>
       )}
       {status === "error" && (
         <p className="text-caption text-error">
-          Gagal memuat quiz. Coba muat ulang halaman.
+          {t("quizHub.error")}
         </p>
       )}
       {status === "ready" && filtered.length === 0 && (
         <p className="text-caption text-muted">
-          Belum ada pertanyaan di kategori ini.
+          {t("quizHub.emptyCategory")}
         </p>
       )}
 
@@ -109,17 +111,17 @@ export default function QuizListPage() {
             <Link
               key={q.id}
               href={`/notes/quiz/${q.id}`}
-              className="flex items-center justify-between gap-3 rounded-card-lg bg-white p-4 shadow-sm"
+              className="flex items-center justify-between gap-3 rounded-card-lg bg-card p-4 shadow-sm"
             >
               <p className="text-body-medium text-ink">{q.question_text}</p>
               {status === "done" && (
                 <span className="flex shrink-0 items-center gap-1 rounded-pill bg-surface px-2.5 py-1 text-caption text-ink">
-                  <Check size={12} /> Hasil siap
+                  <Check size={12} /> {t("quizHub.resultReady")}
                 </span>
               )}
               {status === "waiting" && (
                 <span className="flex shrink-0 items-center gap-1 rounded-pill bg-surface px-2.5 py-1 text-caption text-muted">
-                  <Clock size={12} /> Menunggu
+                  <Clock size={12} /> {t("quizHub.waiting")}
                 </span>
               )}
             </Link>

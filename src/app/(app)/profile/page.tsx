@@ -13,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useSession } from "@/lib/session";
+import { useT, useLanguage } from "@/lib/i18n";
 
 const AVATAR_COLORS: Record<string, string> = {
   "avatar-1": "bg-coral",
@@ -21,49 +22,51 @@ const AVATAR_COLORS: Record<string, string> = {
   "avatar-4": "bg-rose",
 };
 
-function formatSince(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-const SECTIONS: {
-  label: string;
-  items: { href: string; label: string; icon: typeof UserPen; color: string; action?: "logout" }[];
-}[] = [
-  {
-    label: "AKUN",
-    items: [
-      { href: "/profile/edit", label: "Edit Profil", icon: UserPen, color: "bg-coral" },
-      { href: "/profile/notifications", label: "Notifikasi", icon: Bell, color: "bg-coral" },
-    ],
-  },
-  {
-    label: "APLIKASI",
-    items: [
-      { href: "/profile/theme", label: "Tema Tampilan", icon: Palette, color: "bg-periwinkle" },
-      { href: "/profile/language", label: "Bahasa", icon: Globe, color: "bg-periwinkle" },
-    ],
-  },
-  {
-    label: "LAINNYA",
-    items: [
-      { href: "/profile/about", label: "Tentang Aplikasi", icon: Info, color: "bg-[#bc831e]" },
-      { href: "/", label: "Keluar", icon: LogOut, color: "bg-[#bc831e]", action: "logout" },
-    ],
-  },
-];
-
 /** Profile & Settings — matches Figma node 173:3. */
 export default function ProfilePage() {
   const router = useRouter();
   const { coupleName, profiles, logoutProfile } = useSession();
+  const t = useT();
+  const { lang } = useLanguage();
   const oldestCreated = profiles.reduce<string | null>(
     (min, p) => (min === null || p.created_at < min ? p.created_at : min),
     null,
   );
+
+  function formatSince(iso: string) {
+    return new Date(iso).toLocaleDateString(lang === "en" ? "en-US" : "id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  const SECTIONS: {
+    label: string;
+    items: { href: string; label: string; icon: typeof UserPen; color: string; action?: "logout" }[];
+  }[] = [
+    {
+      label: t("profile.section.account").toUpperCase(),
+      items: [
+        { href: "/profile/edit", label: t("profile.editProfile"), icon: UserPen, color: "bg-coral" },
+        { href: "/profile/notifications", label: t("profile.notifications"), icon: Bell, color: "bg-coral" },
+      ],
+    },
+    {
+      label: t("profile.section.app").toUpperCase(),
+      items: [
+        { href: "/profile/theme", label: t("profile.theme"), icon: Palette, color: "bg-periwinkle" },
+        { href: "/profile/language", label: t("profile.language"), icon: Globe, color: "bg-periwinkle" },
+      ],
+    },
+    {
+      label: t("profile.section.other").toUpperCase(),
+      items: [
+        { href: "/profile/about", label: t("profile.about"), icon: Info, color: "bg-[#bc831e]" },
+        { href: "/", label: t("profile.logout"), icon: LogOut, color: "bg-[#bc831e]", action: "logout" },
+      ],
+    },
+  ];
 
   function handleLogout() {
     logoutProfile();
@@ -75,13 +78,13 @@ export default function ProfilePage() {
       <div className="relative flex items-center justify-center">
         <button
           onClick={() => router.push("/home")}
-          aria-label="Kembali"
+          aria-label={t("common.back")}
           className="absolute left-0 flex h-11 w-11 items-center justify-center text-ink"
         >
           <ChevronLeft size={26} />
         </button>
         <h1 className="text-[19px] font-extrabold text-ink">
-          Profil &amp; Pengaturan
+          {t("profile.title")}
         </h1>
       </div>
 
@@ -102,15 +105,15 @@ export default function ProfilePage() {
         <p className="absolute bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-[18px] font-extrabold text-white">
           {coupleName}
         </p>
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[12.5px] font-medium text-ink/85">
-          {oldestCreated ? `Bersama sejak ${formatSince(oldestCreated)}` : ""}
+        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[12.5px] font-medium text-onyx/85">
+          {oldestCreated ? t("profile.since", { date: formatSince(oldestCreated) }) : ""}
         </p>
       </div>
 
       {SECTIONS.map((section) => (
         <div key={section.label} className="flex flex-col gap-3">
           <p className="text-[13.5px] font-bold text-subtle">{section.label}</p>
-          <div className="overflow-hidden rounded-[24px] bg-white shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
+          <div className="overflow-hidden rounded-[24px] bg-card shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
             {section.items.map(({ href, label, icon: Icon, color, action }, i) => {
               const content = (
                 <>

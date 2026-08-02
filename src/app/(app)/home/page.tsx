@@ -6,10 +6,12 @@ import { Bell, BookHeart, MessageCircleHeart, Heart, Flame } from "lucide-react"
 import { useSession } from "@/lib/session";
 import { listEntries } from "@/lib/data/entries";
 import { listNotifications } from "@/lib/data/notifications";
+import { loadNotificationPrefs, isNotificationTypeEnabled } from "@/lib/notification-prefs";
 import { listNotes } from "@/lib/data/notes";
 import { listAllAnswers } from "@/lib/data/quiz";
 import { ActivityHeatmap } from "@/components/ui/ActivityHeatmap";
 import { toLocalDateKey } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 import type { ScrapbookEntry, AppNotification } from "@/lib/supabase/types";
 
 /**
@@ -51,19 +53,20 @@ const AVATAR_COLORS: Record<string, string> = {
   "avatar-4": "bg-rose",
 };
 
-function timeAgo(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(diffMs / 3_600_000);
-  if (hours < 1) return "Baru saja";
-  if (hours < 24) return `${hours} jam lalu`;
-  const days = Math.floor(hours / 24);
-  return `${days} hari lalu`;
-}
-
 /** Home / Landing screen — matches Figma node 166:3. */
 export default function HomePage() {
   const { activeProfileId, profiles } = useSession();
   const me = profiles.find((p) => p.id === activeProfileId);
+  const t = useT();
+
+  function timeAgo(iso: string) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const hours = Math.floor(diffMs / 3_600_000);
+    if (hours < 1) return t("home.timeAgo.now");
+    if (hours < 24) return t("home.timeAgo.hours", { count: hours });
+    const days = Math.floor(hours / 24);
+    return t("home.timeAgo.days", { count: days });
+  }
 
   const [entries, setEntries] = useState<ScrapbookEntry[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -76,11 +79,17 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
 
+    const prefs = loadNotificationPrefs();
+
     Promise.all([listEntries(), listNotifications(), listNotes(), listAllAnswers()])
       .then(([entryData, notifData, noteData, answerData]) => {
         if (cancelled) return;
         setEntries(entryData.slice(0, 1));
-        setNotifications(notifData.slice(0, 2));
+        setNotifications(
+          notifData
+            .filter((n) => isNotificationTypeEnabled(n.type, prefs))
+            .slice(0, 2),
+        );
         setActivity(
           buildActivity([
             ...entryData.map((e) => toLocalDateKey(e.entry_date)),
@@ -115,12 +124,12 @@ export default function HomePage() {
           >
             {me?.display_name?.charAt(0).toUpperCase() ?? "?"}
           </Link>
-          <p className="text-heading text-ink">Halo, sayang :)</p>
+          <p className="text-heading text-ink">{t("home.greeting")}</p>
         </div>
         <Link
           href="/notifications"
-          aria-label="Notifikasi"
-          className="relative flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-ink shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)]"
+          aria-label={t("notifications.title")}
+          className="relative flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-onyx shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)]"
         >
           <Bell size={20} className="text-white" />
           {unreadCount > 0 && (
@@ -137,8 +146,8 @@ export default function HomePage() {
         <div className="absolute right-5 top-5 flex h-[46px] w-[46px] items-center justify-center rounded-full bg-rose-deep">
           <Heart size={20} className="fill-white text-white" />
         </div>
-        <p className="absolute left-5 top-6 text-[12.5px] font-bold text-ink/85">
-          MOMEN TERAKHIR
+        <p className="absolute left-5 top-6 text-[12.5px] font-bold text-onyx/85">
+          {t("home.lastMoment")}
         </p>
         {latestEntry ? (
           <p className="absolute left-5 top-[139px] w-[220px] text-card-title text-white">
@@ -146,10 +155,10 @@ export default function HomePage() {
           </p>
         ) : (
           <p className="absolute left-5 top-[139px] w-[220px] text-card-title text-white">
-            Belum ada kenangan — yuk tambahkan!
+            {t("home.noEntry")}
           </p>
         )}
-        <div className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-squircle bg-ink shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+        <div className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-squircle bg-onyx shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
           <Heart size={16} className="text-white" />
         </div>
       </Link>
@@ -160,14 +169,14 @@ export default function HomePage() {
           className="relative h-[170px] w-1/2 overflow-hidden rounded-[28px] bg-violet p-4"
         >
           <div className="absolute -right-6 -bottom-6 h-[120px] w-[120px] rounded-full bg-white/10" />
-          <div className="flex h-14 w-14 items-center justify-center rounded-squircle bg-ink shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-squircle bg-onyx shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
             <BookHeart size={24} className="text-white" />
           </div>
           <p className="absolute bottom-8 left-4 text-[16px] font-extrabold text-white">
-            Scrapbook
+            {t("home.scrapbook")}
           </p>
-          <p className="absolute bottom-4 left-4 text-[12px] font-medium text-ink/85">
-            Timeline momen
+          <p className="absolute bottom-4 left-4 text-[12px] font-medium text-onyx/85">
+            {t("home.scrapbookDesc")}
           </p>
         </Link>
 
@@ -176,19 +185,19 @@ export default function HomePage() {
           className="relative h-[170px] w-1/2 overflow-hidden rounded-[28px] bg-periwinkle p-4"
         >
           <div className="absolute -right-6 -bottom-6 h-[120px] w-[120px] rounded-full bg-white/10" />
-          <div className="flex h-14 w-14 items-center justify-center rounded-squircle bg-ink shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-squircle bg-onyx shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
             <MessageCircleHeart size={24} className="text-white" />
           </div>
           <p className="absolute bottom-8 left-4 text-[16px] font-extrabold text-white">
-            Notes &amp; Quiz
+            {t("home.notesQuiz")}
           </p>
-          <p className="absolute bottom-4 left-4 text-[12px] font-medium text-ink/85">
-            Pesan &amp; tebakan
+          <p className="absolute bottom-4 left-4 text-[12px] font-medium text-onyx/85">
+            {t("home.notesQuizDesc")}
           </p>
         </Link>
       </div>
 
-      <section className="flex flex-col gap-3 rounded-card-lg border-[1.5px] border-divider bg-white p-4 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
+      <section className="flex flex-col gap-3 rounded-card-lg border-[1.5px] border-divider bg-card p-4 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-squircle bg-rose">
             <Flame size={18} className="text-white" />
@@ -196,11 +205,11 @@ export default function HomePage() {
           <div>
             <p className="text-card-title text-ink">
               {activity.streak > 0
-                ? `${activity.streak} hari beruntun`
-                : "Belum ada streak"}
+                ? t("home.streakActive", { count: activity.streak })
+                : t("home.streakNone")}
             </p>
             <p className="text-caption text-muted">
-              Aktif tiap nambah kenangan, kirim catatan, atau jawab kuis
+              {t("home.streakDesc")}
             </p>
           </div>
         </div>
@@ -208,25 +217,25 @@ export default function HomePage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-section-title text-ink">Aktivitas Terbaru</h2>
+        <h2 className="text-section-title text-ink">{t("home.recentActivity")}</h2>
 
         {status === "loading" && (
-          <p className="text-caption text-muted">Memuat aktivitas…</p>
+          <p className="text-caption text-muted">{t("home.loadingActivity")}</p>
         )}
         {status === "error" && (
           <p className="text-caption text-error">
-            Gagal memuat aktivitas. Coba muat ulang halaman.
+            {t("home.errorActivity")}
           </p>
         )}
 
         {status === "ready" && (
           <Link
             href="/notifications"
-            className="block rounded-[28px] border-[1.5px] border-divider bg-white shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"
+            className="block rounded-[28px] border-[1.5px] border-divider bg-card shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"
           >
             {notifications.length === 0 ? (
               <p className="px-5 py-6 text-body-medium text-muted">
-                Belum ada aktivitas baru.
+                {t("home.noActivity")}
               </p>
             ) : (
               notifications.map((n, i) => (

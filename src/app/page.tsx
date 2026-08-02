@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { LoverrMark } from "@/components/ui/LoverrMark";
 import { Sparkle } from "@/components/ui/Sparkle";
 import { useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 
 /**
  * Splash / Welcome screen — entry point of the app.
@@ -18,6 +19,7 @@ import { useSession } from "@/lib/session";
 export default function SplashPage() {
   const router = useRouter();
   const { ready } = useSession();
+  const t = useT();
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-rose">
@@ -40,7 +42,7 @@ export default function SplashPage() {
       <div className="absolute left-1/2 top-[460px] w-full -translate-x-1/2 text-center">
         <h1 className="text-display text-white">Loverr</h1>
         <p className="mt-1 text-body-medium text-white">
-          Ruang kenangan berdua, tiap hari
+          {t("splash.tagline")}
         </p>
       </div>
 
@@ -48,10 +50,10 @@ export default function SplashPage() {
       <button
         onClick={() => ready && router.push("/pilih-profil")}
         disabled={!ready}
-        className="absolute left-6 top-[634px] flex h-[60px] w-[327px] items-center justify-center rounded-pill bg-ink shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-70"
+        className="absolute left-6 top-[634px] flex h-[60px] w-[327px] items-center justify-center rounded-pill bg-onyx shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-70"
       >
         <span className="text-button text-white">
-          {ready ? "Mulai" : "Menyiapkan…"}
+          {ready ? t("splash.cta.ready") : t("splash.cta.loading")}
         </span>
       </button>
     </main>

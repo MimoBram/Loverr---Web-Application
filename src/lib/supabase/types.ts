@@ -42,6 +42,9 @@ export type ScrapbookEntry = {
   caption: string | null;
   photo_path: string | null;
   entry_date: string;
+  tags: string[];
+  mood: string | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 };

@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 
 const AVATAR_OPTIONS = ["avatar-1", "avatar-2", "avatar-3", "avatar-4"];
 
 export default function EditProfilePage() {
   const router = useRouter();
   const { profiles, activeProfileId, updateProfile } = useSession();
+  const t = useT();
   const me = profiles.find((p) => p.id === activeProfileId);
 
   const [name, setName] = useState(me?.display_name ?? "");
@@ -25,7 +27,7 @@ export default function EditProfilePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Nama tidak boleh kosong.");
+      setError(t("editProfile.nameEmpty"));
       return;
     }
     if (!activeProfileId) return;
@@ -35,7 +37,7 @@ export default function EditProfilePage() {
       setSaved(true);
       setTimeout(() => router.push("/profile"), 600);
     } catch {
-      setError("Gagal menyimpan perubahan. Coba lagi.");
+      setError(t("editProfile.saveError"));
     }
   }
 
@@ -44,12 +46,12 @@ export default function EditProfilePage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          aria-label="Kembali"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm"
+          aria-label={t("common.back")}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-sm"
         >
           <ArrowLeft size={20} className="text-ink" />
         </button>
-        <h1 className="text-heading text-ink">Edit Profil</h1>
+        <h1 className="text-heading text-ink">{t("editProfile.title")}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -63,22 +65,22 @@ export default function EditProfilePage() {
                 "rounded-full transition-transform",
                 avatarKey === key && "scale-110 ring-2 ring-rose ring-offset-2",
               )}
-              aria-label={`Pilih avatar ${key}`}
+              aria-label={t("editProfile.chooseAvatar", { key })}
             >
               <Avatar avatarKey={key} name={name || "?"} size="sm" />
             </button>
           ))}
         </div>
 
-        <Input label="Nama" value={name} onChange={(e) => setName(e.target.value)} />
+        <Input label={t("editProfile.nameLabel")} value={name} onChange={(e) => setName(e.target.value)} />
 
         {error && <p className="text-caption text-error">{error}</p>}
-        {saved && <p className="text-caption text-ink">Tersimpan!</p>}
+        {saved && <p className="text-caption text-ink">{t("editProfile.saved")}</p>}
 
-        <Button type="submit">Simpan Perubahan</Button>
+        <Button type="submit">{t("editProfile.save")}</Button>
 
         <Link href="/profile/pin" className="text-center text-label text-rose">
-          Ganti PIN
+          {t("profile.changePin")}
         </Link>
       </form>
     </main>
