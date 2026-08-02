@@ -18,7 +18,7 @@ export default function ChangePinPage() {
   const [saved, setSaved] = useState(false);
 
   function isValidPin(pin: string) {
-    return /^\d{4,6}$/.test(pin);
+    return /^\d{6}$/.test(pin);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -27,7 +27,7 @@ export default function ChangePinPage() {
 
     if (!activeProfileId) return;
     if (!isValidPin(newPin)) {
-      setError("PIN baru harus 4–6 digit angka.");
+      setError("PIN baru harus 6 digit angka.");
       return;
     }
     if (newPin !== confirmPin) {
@@ -74,7 +74,7 @@ export default function ChangePinPage() {
           onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ""))}
         />
         <Input
-          label="PIN Baru (4–6 digit)"
+          label="PIN Baru (6 digit)"
           type="password"
           inputMode="numeric"
           maxLength={6}

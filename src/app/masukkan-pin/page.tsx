@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-const PIN_LENGTH = 4;
+const PIN_LENGTH = 6;
 const KEYPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
 
 function MasukkanPinInner() {
