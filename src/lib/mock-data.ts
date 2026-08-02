@@ -53,6 +53,17 @@ export const MOCK_PINS: Record<string, string> = {
   "profile-2": FIXED_PROFILES[1].pin,
 };
 
+// The single shared Supabase Auth login for this couple. There is no
+// registration UI anymore — every device silently signs into (or, on the
+// very first run anywhere, creates) this exact account in the background,
+// so the only screens a user ever sees are Pilih Profil and Masukkan PIN.
+export const FIXED_ACCOUNT = {
+  email: "mimo.odyy@loverr.app",
+  password: "Mimo290606-Odyy201004",
+};
+
+export const FIXED_COUPLE_NAME = "Mimo & Odyy";
+
 export const MOCK_ENTRIES: ScrapbookEntry[] = [
   {
     id: "entry-1",

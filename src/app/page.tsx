@@ -8,12 +8,16 @@ import { useSession } from "@/lib/session";
 /**
  * Splash / Welcome screen — entry point of the app.
  * Matches Figma node 164:4 (GF App — App Design).
+ *
+ * This app is permanently seeded for exactly one couple (Mimo & Odyy), so
+ * there's no registration link here — "Mulai" always leads to Pilih Profil.
+ * The shared account is created/signed into silently in the background
+ * (see SessionProvider); the button waits for that (`ready`) before
+ * navigating so Pilih Profil never renders stale placeholder profiles.
  */
 export default function SplashPage() {
   const router = useRouter();
-  const { hasCompletedSetup } = useSession();
-
-  const primaryHref = hasCompletedSetup ? "/pilih-profil" : "/setup-awal";
+  const { ready } = useSession();
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-rose">
@@ -42,21 +46,14 @@ export default function SplashPage() {
 
       {/* primary CTA */}
       <button
-        onClick={() => router.push(primaryHref)}
-        className="absolute left-6 top-[634px] flex h-[60px] w-[327px] items-center justify-center rounded-pill bg-ink shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)]"
+        onClick={() => ready && router.push("/pilih-profil")}
+        disabled={!ready}
+        className="absolute left-6 top-[634px] flex h-[60px] w-[327px] items-center justify-center rounded-pill bg-ink shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-70"
       >
-        <span className="text-button text-white">Mulai</span>
+        <span className="text-button text-white">
+          {ready ? "Mulai" : "Menyiapkan…"}
+        </span>
       </button>
-
-      {hasCompletedSetup && (
-        <button
-          onClick={() => router.push("/setup-awal")}
-          className="absolute left-1/2 top-[712px] -translate-x-1/2 whitespace-nowrap text-[13.5px] text-white"
-        >
-          Baru pertama kali?{" "}
-          <span className="font-bold">Setup Awal</span>
-        </button>
-      )}
     </main>
   );
 }

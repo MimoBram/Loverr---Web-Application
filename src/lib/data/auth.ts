@@ -1,18 +1,23 @@
 import { createClient } from "@/lib/supabase/client";
 import { hashPin, verifyPin as verifyPinHash } from "@/lib/pin";
 import { isSupabaseConfigured } from "@/lib/config";
-import { MOCK_COUPLE } from "@/lib/mock-data";
+import { MOCK_COUPLE, FIXED_ACCOUNT, FIXED_COUPLE_NAME, FIXED_PROFILES } from "@/lib/mock-data";
 import type { Profile, PublicProfile } from "@/lib/supabase/types";
 
 /**
  * Bridges the app's "shared login for a couple" UX to real Supabase Auth.
  *
- * Model: ONE Supabase Auth user per couple (email + password chosen once
- * during Setup Awal). `couples.id` == `auth.users.id`. Every RLS policy in
- * supabase/migrations/0001_init.sql keys off `auth.uid() = couple_id`, so
- * this auth session is what actually unlocks read/write access — the
- * per-profile PIN (see src/lib/pin.ts) is a lightweight "whose turn is it"
- * gate on top, not the security boundary.
+ * Model: ONE Supabase Auth user per couple. `couples.id` == `auth.users.id`.
+ * Every RLS policy in supabase/migrations/0001_init.sql keys off
+ * `auth.uid() = couple_id`, so this auth session is what actually unlocks
+ * read/write access — the per-profile PIN (see src/lib/pin.ts) is a
+ * lightweight "whose turn is it" gate on top, not the security boundary.
+ *
+ * This app is permanently seeded for exactly one couple (Mimo & Odyy), so
+ * there is no registration UI: `ensureCoupleSession` silently signs into
+ * (or, on the very first run anywhere, creates) the single fixed shared
+ * account below, on every device, with no email/password ever shown to
+ * the user.
  *
  * Requires "Confirm email" to be OFF in Supabase Auth settings (Authentication
  * > Sign In / Providers > Email), otherwise `signUp` won't return an active
@@ -88,18 +93,41 @@ export async function signUpCouple(input: SignUpCoupleInput): Promise<CoupleSess
   };
 }
 
-/** "Masuk" screen (second device): sign in to the shared account, load its data. */
-export async function signInCouple(email: string, password: string): Promise<CoupleSession> {
+/**
+ * Silently signs into the single fixed shared account on every device —
+ * or, the very first time this app is ever opened anywhere, creates it.
+ * This is what every screen calls on startup; there is no user-facing
+ * sign-up or sign-in form.
+ */
+export async function ensureCoupleSession(): Promise<CoupleSession> {
   const supabase = createClient();
 
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  if (authError) throw authError;
+  const { data: existing } = await supabase.auth.getSession();
 
-  const userId = authData.user?.id;
-  if (!userId) throw new Error("Login gagal — coba lagi.");
+  if (!existing.session) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: FIXED_ACCOUNT.email,
+      password: FIXED_ACCOUNT.password,
+    });
+
+    if (signInError) {
+      // First run anywhere: the shared account doesn't exist yet — create it.
+      return signUpCouple({
+        email: FIXED_ACCOUNT.email,
+        password: FIXED_ACCOUNT.password,
+        coupleName: FIXED_COUPLE_NAME,
+        profiles: FIXED_PROFILES.map((p) => ({
+          display_name: p.display_name,
+          avatar_key: p.avatar_key,
+          pin: p.pin,
+        })),
+      });
+    }
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) throw new Error("Gagal memuat sesi akun.");
+  const userId = userData.user.id;
 
   const { data: coupleRow, error: coupleError } = await supabase
     .from("couples")

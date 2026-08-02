@@ -67,7 +67,7 @@ export default function ProfilePage() {
 
   function handleLogout() {
     logoutProfile();
-    router.push("/");
+    router.push("/pilih-profil");
   }
 
   return (

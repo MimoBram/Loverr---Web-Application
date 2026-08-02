@@ -7,7 +7,18 @@ import { useSession } from "@/lib/session";
 /** Pilih Profil — choose which partner is using the device right now. */
 export default function PilihProfilPage() {
   const router = useRouter();
-  const { profiles, coupleName } = useSession();
+  const { profiles, coupleName, ready } = useSession();
+
+  // Wait for the silent shared-account bootstrap before rendering real
+  // profile ids — otherwise a tap here could carry a stale mock id into
+  // Masukkan PIN and fail verification against the real backend.
+  if (!ready) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-cream px-6 text-center">
+        <p className="text-body-medium text-muted">Menyiapkan ruang kenangan…</p>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center gap-10 bg-cream px-6 pt-20">
