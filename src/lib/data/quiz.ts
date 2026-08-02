@@ -57,6 +57,23 @@ export async function listAnswers(
   return data ?? [];
 }
 
+/** Every answer this couple has ever submitted, across all questions — used for the Home activity heatmap/streak. */
+export async function listAllAnswers(coupleId?: string): Promise<QuizAnswer[]> {
+  if (!isSupabaseConfigured) {
+    return [...MOCK_QUIZ_ANSWERS];
+  }
+
+  const resolvedCoupleId = await resolveCoupleId(coupleId);
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("quiz_answers")
+    .select("*")
+    .eq("couple_id", resolvedCoupleId);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export interface SubmitAnswerInput {
   couple_id?: string;
   question_id: string;

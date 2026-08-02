@@ -2,11 +2,47 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bell, BookHeart, MessageCircleHeart, Heart } from "lucide-react";
+import { Bell, BookHeart, MessageCircleHeart, Heart, Flame } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { listEntries } from "@/lib/data/entries";
 import { listNotifications } from "@/lib/data/notifications";
+import { listNotes } from "@/lib/data/notes";
+import { listAllAnswers } from "@/lib/data/quiz";
+import { ActivityHeatmap } from "@/components/ui/ActivityHeatmap";
+import { toLocalDateKey } from "@/lib/utils";
 import type { ScrapbookEntry, AppNotification } from "@/lib/supabase/types";
+
+/**
+ * Turns "moments the couple logged something" (entries, notes, quiz answers)
+ * into a date->count map, plus the current daily streak. A day counts as
+ * active if either partner did *anything* — added a memory, sent a note, or
+ * answered a quiz question.
+ */
+function buildActivity(dateKeys: string[]) {
+  const counts: Record<string, number> = {};
+  for (const key of dateKeys) {
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+
+  const active = new Set(Object.keys(counts));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const cursor = new Date(today);
+  if (!active.has(toLocalDateKey(cursor))) {
+    // Today has no activity yet — don't zero the streak out until the day
+    // actually passes without anything logged.
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
+  while (active.has(toLocalDateKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return { counts, streak };
+}
 
 const AVATAR_COLORS: Record<string, string> = {
   "avatar-1": "bg-coral",
@@ -31,16 +67,27 @@ export default function HomePage() {
 
   const [entries, setEntries] = useState<ScrapbookEntry[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [activity, setActivity] = useState<{ counts: Record<string, number>; streak: number }>({
+    counts: {},
+    streak: 0,
+  });
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([listEntries(), listNotifications()])
-      .then(([entryData, notifData]) => {
+    Promise.all([listEntries(), listNotifications(), listNotes(), listAllAnswers()])
+      .then(([entryData, notifData, noteData, answerData]) => {
         if (cancelled) return;
         setEntries(entryData.slice(0, 1));
         setNotifications(notifData.slice(0, 2));
+        setActivity(
+          buildActivity([
+            ...entryData.map((e) => toLocalDateKey(e.entry_date)),
+            ...noteData.map((n) => toLocalDateKey(n.created_at)),
+            ...answerData.map((a) => toLocalDateKey(a.created_at)),
+          ]),
+        );
         setStatus("ready");
       })
       .catch(() => {
@@ -68,12 +115,7 @@ export default function HomePage() {
           >
             {me?.display_name?.charAt(0).toUpperCase() ?? "?"}
           </Link>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-heading text-ink">Halo, sayang :)</p>
-            <div className="h-1.5 w-[150px] overflow-hidden rounded-full bg-divider">
-              <div className="h-full w-[59%] rounded-full bg-rose" />
-            </div>
-          </div>
+          <p className="text-heading text-ink">Halo, sayang :)</p>
         </div>
         <Link
           href="/notifications"
@@ -145,6 +187,25 @@ export default function HomePage() {
           </p>
         </Link>
       </div>
+
+      <section className="flex flex-col gap-3 rounded-card-lg border-[1.5px] border-divider bg-white p-4 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-squircle bg-rose">
+            <Flame size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-card-title text-ink">
+              {activity.streak > 0
+                ? `${activity.streak} hari beruntun`
+                : "Belum ada streak"}
+            </p>
+            <p className="text-caption text-muted">
+              Aktif tiap nambah kenangan, kirim catatan, atau jawab kuis
+            </p>
+          </div>
+        </div>
+        <ActivityHeatmap counts={activity.counts} />
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-section-title text-ink">Aktivitas Terbaru</h2>
