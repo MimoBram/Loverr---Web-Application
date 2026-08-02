@@ -1,0 +1,37 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/ui/Avatar";
+import { useSession } from "@/lib/session";
+
+/** Pilih Profil — choose which partner is using the device right now. */
+export default function PilihProfilPage() {
+  const router = useRouter();
+  const { profiles, coupleName } = useSession();
+
+  return (
+    <main className="flex min-h-screen flex-col items-center gap-10 bg-cream px-6 pt-20">
+      <div className="text-center">
+        <h1 className="text-heading text-ink">Siapa yang masuk?</h1>
+        <p className="text-body-medium text-muted">{coupleName}</p>
+      </div>
+
+      <div className="flex gap-6">
+        {profiles.map((profile) => (
+          <button
+            key={profile.id}
+            onClick={() =>
+              router.push(`/masukkan-pin?profile=${profile.id}`)
+            }
+            className="flex flex-col items-center gap-3 rounded-card-lg p-4 transition-transform active:scale-95"
+          >
+            <Avatar avatarKey={profile.avatar_key} name={profile.display_name} size="lg" />
+            <span className="text-card-title text-ink">
+              {profile.display_name}
+            </span>
+          </button>
+        ))}
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,31 @@
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    padding: 0;
+    margin: 0;
+    background-color: #fcf7f0; /* cream */
+    color: #1a171c; /* ink */
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    max-width: 375px;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 100vh;
+    position: relative;
+  }
+}
