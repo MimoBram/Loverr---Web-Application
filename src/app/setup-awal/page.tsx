@@ -5,43 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
 import { isSupabaseConfigured } from "@/lib/config";
+import { FIXED_PROFILES } from "@/lib/mock-data";
 
-const AVATAR_OPTIONS = ["avatar-1", "avatar-2", "avatar-3", "avatar-4"];
+const COUPLE_NAME = "Mimo & Odyy";
 
-interface PartnerForm {
-  name: string;
-  avatarKey: string;
-  pin: string;
-}
-
-function emptyPartner(defaultAvatar: string): PartnerForm {
-  return { name: "", avatarKey: defaultAvatar, pin: "" };
-}
-
-/** Setup Awal — first-run flow to create the couple + the two profiles. */
+/**
+ * Setup Awal — first-run flow.
+ * This build of Loverr is permanently seeded for exactly one couple
+ * (Mimo & Odyy, matching the Figma design), so there's no generic
+ * "type your names/PINs" form — just the shared account credentials
+ * needed to create the Supabase Auth login for this couple.
+ */
 export default function SetupAwalPage() {
   const router = useRouter();
   const { completeSetup } = useSession();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [coupleName, setCoupleName] = useState("");
-  const [partner1, setPartner1] = useState<PartnerForm>(
-    emptyPartner("avatar-1"),
-  );
-  const [partner2, setPartner2] = useState<PartnerForm>(
-    emptyPartner("avatar-2"),
-  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  function isValidPin(pin: string) {
-    return /^\d{4,6}$/.test(pin);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,29 +41,18 @@ export default function SetupAwalPage() {
         return;
       }
     }
-    if (!coupleName.trim()) {
-      setError("Nama panggilan kalian berdua wajib diisi.");
-      return;
-    }
-    if (!partner1.name.trim() || !partner2.name.trim()) {
-      setError("Nama kedua partner wajib diisi.");
-      return;
-    }
-    if (!isValidPin(partner1.pin) || !isValidPin(partner2.pin)) {
-      setError("PIN harus 4–6 digit angka untuk masing-masing partner.");
-      return;
-    }
 
     setSaving(true);
     try {
       await completeSetup({
         email: email.trim(),
         password,
-        coupleName: coupleName.trim(),
-        profiles: [
-          { display_name: partner1.name.trim(), avatar_key: partner1.avatarKey, pin: partner1.pin },
-          { display_name: partner2.name.trim(), avatar_key: partner2.avatarKey, pin: partner2.pin },
-        ],
+        coupleName: COUPLE_NAME,
+        profiles: FIXED_PROFILES.map((p) => ({
+          display_name: p.display_name,
+          avatar_key: p.avatar_key,
+          pin: p.pin,
+        })),
       });
       router.push("/setup-selesai");
     } catch (err) {
@@ -93,8 +66,23 @@ export default function SetupAwalPage() {
       <div>
         <h1 className="text-heading text-ink">Setup Awal</h1>
         <p className="text-body-medium text-muted">
-          Buat ruang kenangan kalian berdua. Cukup sekali di awal.
+          Ruang kenangan untuk {COUPLE_NAME}. Cukup dibuat sekali di awal.
         </p>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-card-lg bg-white p-4 shadow-sm">
+        <div className="flex -space-x-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-coral font-extrabold text-white">
+            M
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-periwinkle font-extrabold text-white">
+            O
+          </div>
+        </div>
+        <div>
+          <p className="text-card-title text-ink">{COUPLE_NAME}</p>
+          <p className="text-caption text-muted">PIN masing-masing sudah diset</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -121,24 +109,6 @@ export default function SetupAwalPage() {
           </div>
         )}
 
-        <Input
-          label="Nama panggilan kalian berdua"
-          placeholder="cth. Mimo & Odyy"
-          value={coupleName}
-          onChange={(e) => setCoupleName(e.target.value)}
-        />
-
-        <PartnerSection
-          title="Partner 1"
-          value={partner1}
-          onChange={setPartner1}
-        />
-        <PartnerSection
-          title="Partner 2"
-          value={partner2}
-          onChange={setPartner2}
-        />
-
         {error && <p className="text-caption text-error">{error}</p>}
 
         <Button type="submit" disabled={saving}>
@@ -146,64 +116,11 @@ export default function SetupAwalPage() {
         </Button>
 
         {isSupabaseConfigured && (
-          <Link
-            href="/masuk"
-            className="text-center text-label text-rose"
-          >
+          <Link href="/masuk" className="text-center text-label text-rose">
             Pasanganmu sudah setup duluan? Masuk di sini
           </Link>
         )}
       </form>
     </main>
-  );
-}
-
-function PartnerSection({
-  title,
-  value,
-  onChange,
-}: {
-  title: string;
-  value: PartnerForm;
-  onChange: (v: PartnerForm) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-card-lg border border-divider bg-white p-4">
-      <p className="text-label text-ink">{title}</p>
-
-      <div className="flex items-center gap-3">
-        {AVATAR_OPTIONS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onChange({ ...value, avatarKey: key })}
-            className={cn(
-              "rounded-full transition-transform",
-              value.avatarKey === key && "scale-110 ring-2 ring-rose ring-offset-2",
-            )}
-            aria-label={`Pilih avatar ${key}`}
-          >
-            <Avatar avatarKey={key} name={value.name || "?"} size="sm" />
-          </button>
-        ))}
-      </div>
-
-      <Input
-        label="Nama"
-        placeholder="Nama panggilan"
-        value={value.name}
-        onChange={(e) => onChange({ ...value, name: e.target.value })}
-      />
-      <Input
-        label="PIN (4–6 digit)"
-        placeholder="••••"
-        inputMode="numeric"
-        maxLength={6}
-        value={value.pin}
-        onChange={(e) =>
-          onChange({ ...value, pin: e.target.value.replace(/\D/g, "") })
-        }
-      />
-    </div>
   );
 }

@@ -41,9 +41,17 @@ export const MOCK_PROFILES: PublicProfile[] = [
   },
 ];
 
-// Demo PIN for every mock profile — replace with real bcrypt-hashed PINs
-// (src/lib/pin.ts) once profiles are created through Setup Awal for real.
-export const MOCK_PIN = "1234";
+// This app is permanently seeded for exactly one couple — Mimo & Odyy —
+// so their PINs are fixed rather than chosen during Setup Awal.
+export const FIXED_PROFILES = [
+  { display_name: "Mimo", avatar_key: "avatar-1", pin: "290606" },
+  { display_name: "Odyy", avatar_key: "avatar-2", pin: "201004" },
+] as const;
+
+export const MOCK_PINS: Record<string, string> = {
+  "profile-1": FIXED_PROFILES[0].pin,
+  "profile-2": FIXED_PROFILES[1].pin,
+};
 
 export const MOCK_ENTRIES: ScrapbookEntry[] = [
   {

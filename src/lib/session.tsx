@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { MOCK_COUPLE, MOCK_PROFILES, MOCK_PIN } from "@/lib/mock-data";
+import { MOCK_COUPLE, MOCK_PROFILES, MOCK_PINS } from "@/lib/mock-data";
 import { isSupabaseConfigured } from "@/lib/config";
 import {
   signUpCouple,
@@ -170,7 +170,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured) {
       return verifyProfilePin(profileId, attempt);
     }
-    const expected = pins[profileId] ?? MOCK_PIN;
+    const expected = pins[profileId] ?? MOCK_PINS[profileId] ?? "";
     return attempt === expected;
   }
 
