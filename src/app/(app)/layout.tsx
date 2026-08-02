@@ -26,7 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!hydrated || !activeProfileId) return null;
 
   return (
-    <div className="pb-20">
+    <div className="pb-24">
       <OfflineBanner />
       {children}
       <BottomNav />

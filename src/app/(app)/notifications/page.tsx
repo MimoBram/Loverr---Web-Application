@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Image, MessageCircleHeart, Sparkles, Bell } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, Image, MessageCircleHeart, Sparkles, Bell } from "lucide-react";
 import { listNotifications, markNotificationRead } from "@/lib/data/notifications";
 import type { AppNotification, NotificationType } from "@/lib/supabase/types";
 
@@ -16,6 +15,8 @@ const ICONS: Record<NotificationType, typeof Bell> = {
   system: Bell,
 };
 
+const UNREAD_COLORS = ["bg-coral", "bg-periwinkle"] as const;
+
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("id-ID", {
     day: "numeric",
@@ -23,6 +24,23 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function dayGroup(iso: string) {
+  const diffDays = Math.floor(
+    (Date.now() - new Date(iso).getTime()) / 86_400_000,
+  );
+  if (diffDays < 1) return "HARI INI";
+  if (diffDays < 2) return "KEMARIN";
+  if (diffDays < 7) return "MINGGU INI";
+  return "LEBIH LAMA";
+}
+
+function targetHref(n: AppNotification) {
+  if (n.related_entry_id) return `/timeline/${n.related_entry_id}`;
+  if (n.type === "quiz_reminder" || n.type === "quiz_result_ready") return "/notes/quiz";
+  if (n.type === "new_note") return "/notes";
+  return undefined;
 }
 
 export default function NotificationsPage() {
@@ -59,17 +77,28 @@ export default function NotificationsPage() {
     });
   }
 
+  const groups: Record<string, AppNotification[]> = {};
+  for (const n of notifications) {
+    const g = dayGroup(n.created_at);
+    (groups[g] ??= []).push(n);
+  }
+  const groupOrder = ["HARI INI", "KEMARIN", "MINGGU INI", "LEBIH LAMA"].filter(
+    (g) => groups[g]?.length,
+  );
+
+  let unreadColorIndex = 0;
+
   return (
-    <main className="flex min-h-screen flex-col gap-6 px-5 pb-10 pt-6">
-      <div className="flex items-center gap-3">
+    <main className="flex min-h-screen flex-col gap-6 px-5 pb-10 pt-5">
+      <div className="relative flex items-center justify-center">
         <button
           onClick={() => router.back()}
           aria-label="Kembali"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm"
+          className="absolute left-0 flex h-11 w-11 items-center justify-center text-ink"
         >
-          <ArrowLeft size={20} className="text-ink" />
+          <ChevronLeft size={26} />
         </button>
-        <h1 className="text-heading text-ink">Notifikasi</h1>
+        <h1 className="text-[19px] font-extrabold text-ink">Notifikasi</h1>
       </div>
 
       {status === "loading" && (
@@ -80,48 +109,77 @@ export default function NotificationsPage() {
           Gagal memuat notifikasi. Coba muat ulang halaman.
         </p>
       )}
+      {status === "ready" && notifications.length === 0 && (
+        <p className="text-body-medium text-muted">Belum ada notifikasi.</p>
+      )}
 
-      <div className="flex flex-col gap-2">
-        {status === "ready" && notifications.length === 0 && (
-          <p className="text-body-medium text-muted">Belum ada notifikasi.</p>
-        )}
+      {groupOrder.map((group) => (
+        <section key={group} className="flex flex-col gap-3">
+          <p className="text-[13.5px] font-bold text-subtle">{group}</p>
+          <div className="flex flex-col gap-3">
+            {groups[group].map((n) => {
+              const Icon = ICONS[n.type];
+              const href = targetHref(n);
+              const colorClass = !n.is_read
+                ? UNREAD_COLORS[unreadColorIndex++ % UNREAD_COLORS.length]
+                : null;
 
-        {notifications.map((n) => {
-          const Icon = ICONS[n.type];
-          const content = (
-            <div
-              className={cn(
-                "flex items-start gap-3 rounded-card-lg p-4",
-                n.is_read ? "bg-white" : "bg-cream shadow-sm",
-              )}
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
-                <Icon size={18} className="text-rose" />
-              </div>
-              <div className="flex-1">
-                <p className="text-body-medium text-ink">{n.title}</p>
-                {n.body && <p className="text-caption text-muted">{n.body}</p>}
-                <p className="mt-1 text-caption text-muted">
-                  {formatTime(n.created_at)}
-                </p>
-              </div>
-              {!n.is_read && (
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-rose" />
-              )}
-            </div>
-          );
+              const inner = (
+                <div
+                  className={`relative flex items-start gap-3 overflow-hidden rounded-[24px] p-4 ${
+                    colorClass ? colorClass : "bg-white shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"
+                  }`}
+                >
+                  {colorClass && (
+                    <div className="absolute -right-8 -top-8 h-[100px] w-[100px] rounded-full bg-white/10" />
+                  )}
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+                    <Icon size={20} className="text-ink" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-[13px] font-extrabold ${
+                        colorClass ? "text-ink" : "text-ink"
+                      }`}
+                    >
+                      {n.title}
+                    </p>
+                    {n.body && (
+                      <p
+                        className={`mt-0.5 truncate text-[13px] font-medium ${
+                          colorClass ? "text-ink/85" : "text-muted"
+                        }`}
+                      >
+                        {n.body}
+                      </p>
+                    )}
+                    <p
+                      className={`mt-1 text-[12px] ${
+                        colorClass ? "text-ink/75" : "text-subtle"
+                      }`}
+                    >
+                      {formatTime(n.created_at)}
+                    </p>
+                  </div>
+                  {colorClass && (
+                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-white" />
+                  )}
+                </div>
+              );
 
-          return n.related_entry_id ? (
-            <Link key={n.id} href={`/timeline/${n.related_entry_id}`} onClick={() => handleOpen(n)}>
-              {content}
-            </Link>
-          ) : (
-            <button key={n.id} onClick={() => handleOpen(n)} className="text-left">
-              {content}
-            </button>
-          );
-        })}
-      </div>
+              return href ? (
+                <Link key={n.id} href={href} onClick={() => handleOpen(n)}>
+                  {inner}
+                </Link>
+              ) : (
+                <button key={n.id} onClick={() => handleOpen(n)} className="text-left">
+                  {inner}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -75,6 +76,10 @@ export default function EditProfilePage() {
         {saved && <p className="text-caption text-ink">Tersimpan!</p>}
 
         <Button type="submit">Simpan Perubahan</Button>
+
+        <Link href="/profile/pin" className="text-center text-label text-rose">
+          Ganti PIN
+        </Link>
       </form>
     </main>
   );

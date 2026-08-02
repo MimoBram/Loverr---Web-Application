@@ -87,6 +87,18 @@ export async function createEntry(input: CreateEntryInput): Promise<ScrapbookEnt
   return data;
 }
 
+export async function deleteEntry(id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const idx = MOCK_ENTRIES.findIndex((e) => e.id === id);
+    if (idx !== -1) MOCK_ENTRIES.splice(idx, 1);
+    return;
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.from("scrapbook_entries").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /**
  * Uploads a photo File to the `scrapbook` Storage bucket at
  * `${coupleId}/${entryId}.<ext>` (matches the RLS policy in
