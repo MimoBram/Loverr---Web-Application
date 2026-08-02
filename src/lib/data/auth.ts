@@ -4,6 +4,8 @@ import { isSupabaseConfigured } from "@/lib/config";
 import { MOCK_COUPLE, FIXED_ACCOUNT, FIXED_COUPLE_NAME, FIXED_PROFILES } from "@/lib/mock-data";
 import type { Profile, PublicProfile } from "@/lib/supabase/types";
 
+type SupabaseBrowserClient = ReturnType<typeof createClient>;
+
 /**
  * Bridges the app's "shared login for a couple" UX to real Supabase Auth.
  *
@@ -94,6 +96,66 @@ export async function signUpCouple(input: SignUpCoupleInput): Promise<CoupleSess
 }
 
 /**
+ * Force the two profiles under this couple to exactly match FIXED_PROFILES
+ * (name, avatar, and — critically — PIN), creating any that are missing.
+ *
+ * This exists because the shared account may already have been created by
+ * an earlier build of this app (back when Setup Awal let people type their
+ * own names/PINs during testing). Signing into that pre-existing account
+ * alone would keep serving those stale PINs forever, silently drifting
+ * from "Mimo = 290606 / Odyy = 201004". Running this on every bootstrap
+ * makes the fixed PINs authoritative no matter what was seeded before.
+ */
+async function reconcileFixedProfiles(
+  supabase: SupabaseBrowserClient,
+  coupleId: string,
+  existingProfiles: Profile[],
+): Promise<PublicProfile[]> {
+  const bySortOrder = [...existingProfiles].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+
+  const results: PublicProfile[] = [];
+  for (let i = 0; i < FIXED_PROFILES.length; i++) {
+    const fixed = FIXED_PROFILES[i];
+    const pinHash = await hashPin(fixed.pin);
+    const existing = bySortOrder[i];
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: fixed.display_name,
+          avatar_key: fixed.avatar_key,
+          pin_hash: pinHash,
+          sort_order: i,
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      results.push(stripPinHash(data));
+    } else {
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert({
+          couple_id: coupleId,
+          display_name: fixed.display_name,
+          avatar_key: fixed.avatar_key,
+          pin_hash: pinHash,
+          sort_order: i,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      results.push(stripPinHash(data));
+    }
+  }
+
+  return results;
+}
+
+/**
  * Silently signs into the single fixed shared account on every device —
  * or, the very first time this app is ever opened anywhere, creates it.
  * This is what every screen calls on startup; there is no user-facing
@@ -136,6 +198,13 @@ export async function ensureCoupleSession(): Promise<CoupleSession> {
     .single();
   if (coupleError) throw coupleError;
 
+  if (coupleRow.couple_name !== FIXED_COUPLE_NAME) {
+    await supabase
+      .from("couples")
+      .update({ couple_name: FIXED_COUPLE_NAME })
+      .eq("id", userId);
+  }
+
   const { data: profileRows, error: profilesError } = await supabase
     .from("profiles")
     .select("*")
@@ -143,10 +212,16 @@ export async function ensureCoupleSession(): Promise<CoupleSession> {
     .order("sort_order");
   if (profilesError) throw profilesError;
 
+  const profiles = await reconcileFixedProfiles(
+    supabase,
+    userId,
+    profileRows ?? [],
+  );
+
   return {
     coupleId: userId,
-    coupleName: coupleRow.couple_name,
-    profiles: (profileRows ?? []).map(stripPinHash),
+    coupleName: FIXED_COUPLE_NAME,
+    profiles,
   };
 }
 
