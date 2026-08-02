@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useSession } from "@/lib/session";
 import { createEntry, uploadEntryPhoto } from "@/lib/data/entries";
-import { MOCK_COUPLE } from "@/lib/mock-data";
+import { resolveCoupleId } from "@/lib/data/auth";
 
 /** New Entry — add a scrapbook card for today (or a chosen date). */
 export default function NewEntryPage() {
@@ -50,7 +50,7 @@ export default function NewEntryPage() {
     setSaving(true);
 
     try {
-      const coupleId = MOCK_COUPLE.id;
+      const coupleId = await resolveCoupleId();
       const entryId = `entry-${Date.now()}`;
 
       let photoPath: string | null = null;

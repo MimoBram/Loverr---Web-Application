@@ -1,22 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
-import { MOCK_NOTIFICATIONS, MOCK_COUPLE } from "@/lib/mock-data";
+import { MOCK_NOTIFICATIONS } from "@/lib/mock-data";
+import { resolveCoupleId } from "@/lib/data/auth";
 import type { AppNotification } from "@/lib/supabase/types";
 
-export async function listNotifications(
-  coupleId: string = MOCK_COUPLE.id,
-): Promise<AppNotification[]> {
+export async function listNotifications(coupleId?: string): Promise<AppNotification[]> {
   if (!isSupabaseConfigured) {
     return [...MOCK_NOTIFICATIONS].sort((a, b) =>
       a.created_at < b.created_at ? 1 : -1,
     );
   }
 
+  const resolvedCoupleId = await resolveCoupleId(coupleId);
   const supabase = createClient();
   const { data, error } = await supabase
     .from("notifications")
     .select("*")
-    .eq("couple_id", coupleId)
+    .eq("couple_id", resolvedCoupleId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;

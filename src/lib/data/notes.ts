@@ -1,18 +1,20 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { MOCK_NOTES, MOCK_COUPLE } from "@/lib/mock-data";
+import { resolveCoupleId } from "@/lib/data/auth";
 import type { Note } from "@/lib/supabase/types";
 
-export async function listNotes(coupleId: string = MOCK_COUPLE.id): Promise<Note[]> {
+export async function listNotes(coupleId?: string): Promise<Note[]> {
   if (!isSupabaseConfigured) {
     return [...MOCK_NOTES].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   }
 
+  const resolvedCoupleId = await resolveCoupleId(coupleId);
   const supabase = createClient();
   const { data, error } = await supabase
     .from("notes")
     .select("*")
-    .eq("couple_id", coupleId)
+    .eq("couple_id", resolvedCoupleId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -26,7 +28,9 @@ export interface CreateNoteInput {
 }
 
 export async function createNote(input: CreateNoteInput): Promise<Note> {
-  const coupleId = input.couple_id ?? MOCK_COUPLE.id;
+  const coupleId = isSupabaseConfigured
+    ? await resolveCoupleId(input.couple_id)
+    : (input.couple_id ?? MOCK_COUPLE.id);
 
   if (!isSupabaseConfigured) {
     const note: Note = {

@@ -21,7 +21,7 @@ export default function ChangePinPage() {
     return /^\d{4,6}$/.test(pin);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
@@ -35,7 +35,13 @@ export default function ChangePinPage() {
       return;
     }
 
-    const ok = updatePin(activeProfileId, oldPin, newPin);
+    let ok: boolean;
+    try {
+      ok = await updatePin(activeProfileId, oldPin, newPin);
+    } catch {
+      setError("Gagal mengganti PIN. Coba lagi.");
+      return;
+    }
     if (!ok) {
       setError("PIN lama salah.");
       return;

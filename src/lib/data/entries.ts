@@ -1,25 +1,28 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { MOCK_ENTRIES, MOCK_COUPLE } from "@/lib/mock-data";
+import { resolveCoupleId } from "@/lib/data/auth";
 import type { ScrapbookEntry } from "@/lib/supabase/types";
 
 /**
  * Data-access layer for scrapbook_entries. Every function checks
  * `isSupabaseConfigured` and either queries the real project or falls
  * back to the in-memory mock array — same shape either way, so screens
- * never need to know which backend answered.
+ * never need to know which backend answered. `coupleId` resolves to the
+ * signed-in couple (via resolveCoupleId) unless explicitly passed.
  */
 
-export async function listEntries(coupleId: string = MOCK_COUPLE.id): Promise<ScrapbookEntry[]> {
+export async function listEntries(coupleId?: string): Promise<ScrapbookEntry[]> {
   if (!isSupabaseConfigured) {
     return [...MOCK_ENTRIES].sort((a, b) => (a.entry_date < b.entry_date ? 1 : -1));
   }
 
+  const resolvedCoupleId = await resolveCoupleId(coupleId);
   const supabase = createClient();
   const { data, error } = await supabase
     .from("scrapbook_entries")
     .select("*")
-    .eq("couple_id", coupleId)
+    .eq("couple_id", resolvedCoupleId)
     .order("entry_date", { ascending: false });
 
   if (error) throw error;
@@ -53,7 +56,9 @@ export interface CreateEntryInput {
 }
 
 export async function createEntry(input: CreateEntryInput): Promise<ScrapbookEntry> {
-  const coupleId = input.couple_id ?? MOCK_COUPLE.id;
+  const coupleId = isSupabaseConfigured
+    ? await resolveCoupleId(input.couple_id)
+    : (input.couple_id ?? MOCK_COUPLE.id);
 
   if (!isSupabaseConfigured) {
     const entry: ScrapbookEntry = {

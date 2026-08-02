@@ -21,7 +21,7 @@ export default function EditProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
       setError("Nama tidak boleh kosong.");
@@ -29,9 +29,13 @@ export default function EditProfilePage() {
     }
     if (!activeProfileId) return;
 
-    updateProfile(activeProfileId, { display_name: name.trim(), avatar_key: avatarKey });
-    setSaved(true);
-    setTimeout(() => router.push("/profile"), 600);
+    try {
+      await updateProfile(activeProfileId, { display_name: name.trim(), avatar_key: avatarKey });
+      setSaved(true);
+      setTimeout(() => router.push("/profile"), 600);
+    } catch {
+      setError("Gagal menyimpan perubahan. Coba lagi.");
+    }
   }
 
   return (

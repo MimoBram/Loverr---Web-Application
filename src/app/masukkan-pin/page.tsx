@@ -20,7 +20,7 @@ function MasukkanPinInner() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
 
-  function handleKey(key: string) {
+  async function handleKey(key: string) {
     setError(false);
     if (key === "back") {
       setPin((p) => p.slice(0, -1));
@@ -32,7 +32,8 @@ function MasukkanPinInner() {
     setPin(next);
 
     if (next.length === PIN_LENGTH) {
-      if (profileId && verifyPin(profileId, next)) {
+      const ok = profileId && (await verifyPin(profileId, next));
+      if (ok) {
         setActiveProfileId(profileId);
         router.push("/home");
       } else {

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
 import { MOCK_QUIZ_QUESTIONS, MOCK_QUIZ_ANSWERS, MOCK_COUPLE } from "@/lib/mock-data";
+import { resolveCoupleId } from "@/lib/data/auth";
 import type { QuizQuestion, QuizAnswer } from "@/lib/supabase/types";
 
 export async function listQuestions(): Promise<QuizQuestion[]> {
@@ -38,18 +39,19 @@ export async function getQuestion(id: string): Promise<QuizQuestion | undefined>
 
 export async function listAnswers(
   questionId: string,
-  coupleId: string = MOCK_COUPLE.id,
+  coupleId?: string,
 ): Promise<QuizAnswer[]> {
   if (!isSupabaseConfigured) {
     return MOCK_QUIZ_ANSWERS.filter((a) => a.question_id === questionId);
   }
 
+  const resolvedCoupleId = await resolveCoupleId(coupleId);
   const supabase = createClient();
   const { data, error } = await supabase
     .from("quiz_answers")
     .select("*")
     .eq("question_id", questionId)
-    .eq("couple_id", coupleId);
+    .eq("couple_id", resolvedCoupleId);
 
   if (error) throw error;
   return data ?? [];
@@ -63,7 +65,9 @@ export interface SubmitAnswerInput {
 }
 
 export async function submitAnswer(input: SubmitAnswerInput): Promise<QuizAnswer> {
-  const coupleId = input.couple_id ?? MOCK_COUPLE.id;
+  const coupleId = isSupabaseConfigured
+    ? await resolveCoupleId(input.couple_id)
+    : (input.couple_id ?? MOCK_COUPLE.id);
 
   if (!isSupabaseConfigured) {
     const answer: QuizAnswer = {

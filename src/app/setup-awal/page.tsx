@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
+import { isSupabaseConfigured } from "@/lib/config";
 
 const AVATAR_OPTIONS = ["avatar-1", "avatar-2", "avatar-3", "avatar-4"];
 
@@ -25,6 +27,8 @@ export default function SetupAwalPage() {
   const router = useRouter();
   const { completeSetup } = useSession();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [coupleName, setCoupleName] = useState("");
   const [partner1, setPartner1] = useState<PartnerForm>(
     emptyPartner("avatar-1"),
@@ -33,15 +37,26 @@ export default function SetupAwalPage() {
     emptyPartner("avatar-2"),
   );
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function isValidPin(pin: string) {
     return /^\d{4,6}$/.test(pin);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
+    if (isSupabaseConfigured) {
+      if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+        setError("Email akun bersama wajib diisi dengan format yang benar.");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Password akun bersama minimal 6 karakter.");
+        return;
+      }
+    }
     if (!coupleName.trim()) {
       setError("Nama panggilan kalian berdua wajib diisi.");
       return;
@@ -55,15 +70,22 @@ export default function SetupAwalPage() {
       return;
     }
 
-    completeSetup({
-      coupleName: coupleName.trim(),
-      profiles: [
-        { display_name: partner1.name.trim(), avatar_key: partner1.avatarKey, pin: partner1.pin },
-        { display_name: partner2.name.trim(), avatar_key: partner2.avatarKey, pin: partner2.pin },
-      ],
-    });
-
-    router.push("/setup-selesai");
+    setSaving(true);
+    try {
+      await completeSetup({
+        email: email.trim(),
+        password,
+        coupleName: coupleName.trim(),
+        profiles: [
+          { display_name: partner1.name.trim(), avatar_key: partner1.avatarKey, pin: partner1.pin },
+          { display_name: partner2.name.trim(), avatar_key: partner2.avatarKey, pin: partner2.pin },
+        ],
+      });
+      router.push("/setup-selesai");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal membuat akun. Coba lagi.");
+      setSaving(false);
+    }
   }
 
   return (
@@ -76,6 +98,29 @@ export default function SetupAwalPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {isSupabaseConfigured && (
+          <div className="flex flex-col gap-3 rounded-card-lg border border-divider bg-white p-4">
+            <p className="text-label text-ink">Akun Bersama</p>
+            <p className="text-caption text-muted">
+              Dipakai pasanganmu untuk gabung dari HP-nya sendiri lewat halaman Masuk.
+            </p>
+            <Input
+              label="Email"
+              type="email"
+              placeholder="kalian@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input
+              label="Password (min. 6 karakter)"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        )}
+
         <Input
           label="Nama panggilan kalian berdua"
           placeholder="cth. Mimo & Odyy"
@@ -96,7 +141,18 @@ export default function SetupAwalPage() {
 
         {error && <p className="text-caption text-error">{error}</p>}
 
-        <Button type="submit">Lanjutkan</Button>
+        <Button type="submit" disabled={saving}>
+          {saving ? "Membuat ruang kenangan…" : "Lanjutkan"}
+        </Button>
+
+        {isSupabaseConfigured && (
+          <Link
+            href="/masuk"
+            className="text-center text-label text-rose"
+          >
+            Pasanganmu sudah setup duluan? Masuk di sini
+          </Link>
+        )}
       </form>
     </main>
   );
