@@ -191,14 +191,23 @@ export async function ensureCoupleSession(): Promise<CoupleSession> {
   if (userError || !userData.user) throw new Error("Gagal memuat sesi akun.");
   const userId = userData.user.id;
 
+  // .maybeSingle() (not .single()) on purpose: this couple row may not
+  // exist yet even though the auth user does — e.g. if the shared account
+  // was created manually via the Supabase dashboard (to sidestep the
+  // default email-confirmation rate limit) rather than through signUpCouple.
   const { data: coupleRow, error: coupleError } = await supabase
     .from("couples")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
   if (coupleError) throw coupleError;
 
-  if (coupleRow.couple_name !== FIXED_COUPLE_NAME) {
+  if (!coupleRow) {
+    const { error: insertCoupleError } = await supabase
+      .from("couples")
+      .insert({ id: userId, couple_name: FIXED_COUPLE_NAME });
+    if (insertCoupleError) throw insertCoupleError;
+  } else if (coupleRow.couple_name !== FIXED_COUPLE_NAME) {
     await supabase
       .from("couples")
       .update({ couple_name: FIXED_COUPLE_NAME })
