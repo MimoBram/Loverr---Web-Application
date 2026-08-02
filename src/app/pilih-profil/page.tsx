@@ -7,7 +7,7 @@ import { useSession } from "@/lib/session";
 /** Pilih Profil — choose which partner is using the device right now. */
 export default function PilihProfilPage() {
   const router = useRouter();
-  const { profiles, coupleName, ready } = useSession();
+  const { profiles, coupleName, ready, bootstrapError } = useSession();
 
   // Wait for the silent shared-account bootstrap before rendering real
   // profile ids — otherwise a tap here could carry a stale mock id into
@@ -26,6 +26,13 @@ export default function PilihProfilPage() {
         <h1 className="text-heading text-ink">Siapa yang masuk?</h1>
         <p className="text-body-medium text-muted">{coupleName}</p>
       </div>
+
+      {bootstrapError && (
+        <p className="max-w-[300px] text-center text-caption text-error">
+          Gagal menyiapkan akun bersama: {bootstrapError}. PIN mungkin belum
+          ter-update — coba refresh halaman ini.
+        </p>
+      )}
 
       <div className="flex gap-6">
         {profiles.map((profile) => (

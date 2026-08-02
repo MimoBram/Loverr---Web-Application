@@ -37,6 +37,12 @@ interface SessionState {
   hydrated: boolean;
   /** True once coupleName/profiles reflect the real backend (instant in mock mode). */
   ready: boolean;
+  /**
+   * Set if the silent shared-account bootstrap failed. `ready` still flips
+   * to true so the app doesn't hang forever, but profiles/PINs may be
+   * stale — screens should surface this rather than fail mysteriously.
+   */
+  bootstrapError: string | null;
   /** Which profile is currently "unlocked" on this device (post-PIN). */
   activeProfileId: string | null;
   setActiveProfileId: (id: string | null) => void;
@@ -65,6 +71,7 @@ const SessionContext = createContext<SessionState | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [ready, setReady] = useState(!isSupabaseConfigured);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [activeProfileId, setActiveProfileIdState] = useState<string | null>(
     null,
   );
@@ -108,7 +115,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setReady(true);
         })
         .catch((err) => {
+          const message = err instanceof Error ? err.message : String(err);
           console.error("Gagal menyiapkan sesi akun bersama:", err);
+          setBootstrapError(message);
           setReady(true);
         });
     }
@@ -183,6 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       value={{
         hydrated,
         ready,
+        bootstrapError,
         activeProfileId,
         setActiveProfileId,
         coupleName,

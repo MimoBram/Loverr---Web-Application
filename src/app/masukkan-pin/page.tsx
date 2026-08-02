@@ -14,7 +14,7 @@ function MasukkanPinInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const profileId = searchParams.get("profile");
-  const { profiles, setActiveProfileId, verifyPin } = useSession();
+  const { profiles, setActiveProfileId, verifyPin, bootstrapError } = useSession();
 
   const profile = profiles.find((p) => p.id === profileId);
   const [pin, setPin] = useState("");
@@ -68,6 +68,12 @@ function MasukkanPinInner() {
         <h1 className="text-heading text-ink">Hai, {profile.display_name}</h1>
         <p className="text-body-medium text-muted">Masukkan PIN kamu</p>
       </div>
+
+      {bootstrapError && (
+        <p className="max-w-[300px] text-center text-caption text-error">
+          Akun bersama gagal disiapkan: {bootstrapError}
+        </p>
+      )}
 
       <div className={cn("flex gap-3", error && "animate-pulse")}>
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
