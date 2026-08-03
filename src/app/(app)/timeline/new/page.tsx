@@ -152,7 +152,13 @@ function NewEntryInner() {
 
     try {
       const coupleId = await resolveCoupleId();
-      const entryId = editId ?? `entry-${Date.now()}`;
+      // scrapbook_entries.id is a `uuid` column in the real backend — a
+      // client-side ID is generated upfront (not left to the DB's default)
+      // because uploadEntryPhoto() below needs it for the storage path
+      // before the row exists. Must be an actual UUID, not an arbitrary
+      // string like `entry-${Date.now()}`, or the insert fails with
+      // "invalid input syntax for type uuid".
+      const entryId = editId ?? crypto.randomUUID();
       const title = deriveTitle(caption);
 
       let photoPath = existingPhotoPath;
