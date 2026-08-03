@@ -76,7 +76,7 @@ export default function NoteComposePage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col gap-6 px-5 pb-10 pt-5">
+    <main className="flex min-h-screen flex-col gap-6 px-5 pb-28 pt-5">
       <div className="relative flex items-center justify-center">
         <button
           onClick={() => router.back()}
@@ -86,13 +86,6 @@ export default function NoteComposePage() {
           <ChevronLeft size={26} />
         </button>
         <h1 className="text-[19px] font-extrabold text-ink">{t("noteCompose.title")}</h1>
-        <button
-          onClick={handleSubmit}
-          disabled={saving}
-          className="absolute right-0 flex h-10 items-center justify-center rounded-pill bg-onyx px-5 text-[12.5px] font-bold text-white disabled:opacity-60"
-        >
-          {saving ? t("noteCompose.sending") : t("noteCompose.send")}
-        </button>
       </div>
 
       {fromPartner && (
@@ -137,6 +130,14 @@ export default function NoteComposePage() {
       <p className="text-center text-[13px] text-muted">
         {t("noteCompose.footer")}
       </p>
+
+      <button
+        onClick={handleSubmit}
+        disabled={saving}
+        className="fixed bottom-28 left-5 right-5 z-30 mx-auto flex h-16 w-[calc(100%-40px)] max-w-[335px] items-center justify-center rounded-[32px] bg-onyx text-[15px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
+      >
+        {saving ? t("noteCompose.sending") : t("noteCompose.send")}
+      </button>
     </main>
   );
 }
