@@ -114,8 +114,10 @@ export default function QuizQuestionPage() {
 
       setRetrying(false);
       await load();
-    } catch {
-      setError(t("quiz.error"));
+    } catch (err) {
+      console.error("submitAnswer failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setError(t("quiz.error") + detail);
       setSubmitting(false);
     }
   }

@@ -69,8 +69,10 @@ export default function NoteComposePage() {
       });
 
       router.push("/notes");
-    } catch {
-      setError(t("noteCompose.error"));
+    } catch (err) {
+      console.error("createNote failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setError(t("noteCompose.error") + detail);
       setSaving(false);
     }
   }

@@ -75,6 +75,7 @@ export const dictionary = {
   "entryDetail.confirmDesc": { id: "Tindakan ini tidak bisa dibatalkan. Foto dan cerita akan hilang permanen.", en: "This can't be undone. The photo and story will be gone for good." },
   "entryDetail.confirmYes": { id: "Ya, Hapus", en: "Yes, Delete" },
   "entryDetail.moodAria": { id: "Mood: {mood}", en: "Mood: {mood}" },
+  "entryDetail.deleteError": { id: "Gagal menghapus kenangan. Coba lagi.", en: "Couldn't delete the memory. Try again." },
 
   // New Entry / Edit
   "newEntry.titleNew": { id: "Entri Baru", en: "New Entry" },

@@ -63,7 +63,11 @@ export default function EntryDetailPage() {
     try {
       await deleteEntry(entry.id);
       router.push("/timeline");
-    } catch {
+    } catch (err) {
+      console.error("deleteEntry failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setShareStatus(t("entryDetail.deleteError") + detail);
+      setTimeout(() => setShareStatus(null), 4000);
       setDeleting(false);
       setConfirmOpen(false);
     }
@@ -76,7 +80,8 @@ export default function EntryDetailPage() {
     setEntry({ ...entry, is_favorite: next }); // optimistic
     try {
       await setEntryFavorite(entry.id, next);
-    } catch {
+    } catch (err) {
+      console.error("setEntryFavorite failed:", err);
       setEntry({ ...entry, is_favorite: !next }); // revert on failure
     }
   }

@@ -172,8 +172,10 @@ function NewEntryInner() {
 
         router.push("/timeline");
       }
-    } catch {
-      setError(t("newEntry.error"));
+    } catch (err) {
+      console.error("createEntry/updateEntry failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setError(t("newEntry.error") + detail);
       setSaving(false);
     }
   }

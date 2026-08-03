@@ -36,8 +36,10 @@ export default function EditProfilePage() {
       await updateProfile(activeProfileId, { display_name: name.trim(), avatar_key: avatarKey });
       setSaved(true);
       setTimeout(() => router.push("/profile"), 600);
-    } catch {
-      setError(t("editProfile.saveError"));
+    } catch (err) {
+      console.error("updateProfile failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setError(t("editProfile.saveError") + detail);
     }
   }
 

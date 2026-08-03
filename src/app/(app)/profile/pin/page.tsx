@@ -40,8 +40,10 @@ export default function ChangePinPage() {
     let ok: boolean;
     try {
       ok = await updatePin(activeProfileId, oldPin, newPin);
-    } catch {
-      setError(t("changePin.errorGeneric"));
+    } catch (err) {
+      console.error("updatePin failed:", err);
+      const detail = err instanceof Error ? ` (${err.message})` : "";
+      setError(t("changePin.errorGeneric") + detail);
       return;
     }
     if (!ok) {
