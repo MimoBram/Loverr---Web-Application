@@ -233,7 +233,7 @@ export default function EntryDetailPage() {
         </div>
       )}
 
-      <div className="fixed bottom-6 left-5 right-5 mx-auto flex max-w-[335px] gap-3.5">
+      <div className="fixed bottom-28 left-5 right-5 z-30 mx-auto flex max-w-[335px] gap-3.5">
         <Link
           href={`/timeline/new?edit=${entry.id}`}
           className="flex h-16 flex-1 items-center justify-center rounded-[32px] border-2 border-ink bg-card text-[14.5px] font-bold text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"

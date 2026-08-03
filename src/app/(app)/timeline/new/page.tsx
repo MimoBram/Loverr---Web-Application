@@ -329,7 +329,7 @@ function NewEntryInner() {
       <button
         type="submit"
         disabled={saving}
-        className="fixed bottom-6 left-5 right-5 mx-auto flex h-16 w-[calc(100%-40px)] max-w-[335px] items-center justify-center rounded-[32px] bg-onyx text-[15px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
+        className="fixed bottom-28 left-5 right-5 z-30 mx-auto flex h-16 w-[calc(100%-40px)] max-w-[335px] items-center justify-center rounded-[32px] bg-onyx text-[15px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
       >
         {saving
           ? t("newEntry.saving")
