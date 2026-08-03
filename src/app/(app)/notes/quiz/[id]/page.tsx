@@ -13,6 +13,26 @@ import { cn, errorMessage } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import type { QuizQuestion, QuizAnswer } from "@/lib/supabase/types";
 
+// This screen keeps its warm peach accent background in both light and dark
+// mode by design (see `quiz-accent` in tailwind.config.ts) — it's a deliberate
+// full-bleed "mood" moment, not a surface that should fade to the app's dark
+// cream. Because of that, every color on this page must be a *static* token
+// (onyx / white / brand hues), never the theme-reactive `ink`/`muted`/`subtle`
+// tokens — those flip to near-white in dark mode and become invisible against
+// this page's always-light backgrounds.
+const CATEGORY_STYLES: Record<string, { pillBg: string; pillText: string; dot: string }> = {
+  umum: { pillBg: "bg-coral", pillText: "text-coral", dot: "bg-coral" },
+  kenangan: { pillBg: "bg-violet", pillText: "text-violet", dot: "bg-violet" },
+  "masa depan": { pillBg: "bg-periwinkle", pillText: "text-periwinkle", dot: "bg-periwinkle" },
+  random: { pillBg: "bg-rose-deep", pillText: "text-rose-deep", dot: "bg-rose-deep" },
+};
+const DEFAULT_CATEGORY_STYLE = { pillBg: "bg-onyx", pillText: "text-onyx", dot: "bg-onyx" };
+
+// Fades the category-pill scroller's edges instead of hard-cutting the last
+// visible pill — signals "there's more, scroll me" instead of looking broken.
+const EDGE_FADE =
+  "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)";
+
 /** Quiz Interaction — matches Figma node 171:32. */
 export default function QuizQuestionPage() {
   const router = useRouter();
@@ -169,18 +189,20 @@ export default function QuizQuestionPage() {
     },
   ];
 
+  const categoryStyle = CATEGORY_STYLES[question.category] ?? DEFAULT_CATEGORY_STYLE;
+
   return (
-    <main className="flex min-h-screen flex-col gap-6 bg-quiz-accent px-5 pb-10 pt-6">
+    <main className="flex min-h-screen flex-col gap-5 bg-quiz-accent px-5 pb-10 pt-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/notes/quiz")}
           aria-label={t("common.back")}
           className="flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
         >
-          <ChevronLeft size={22} className="text-ink" />
+          <ChevronLeft size={22} className="text-onyx" />
         </button>
         <div className="flex h-[52px] items-center justify-center rounded-pill bg-white px-6 shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]">
-          <p className="text-[13.5px] font-extrabold text-ink">
+          <p className="text-[13.5px] font-extrabold text-onyx">
             {t("quiz.soal", { current: questionIndex >= 0 ? questionIndex + 1 : 1, total: total || 1 })}
           </p>
         </div>
@@ -191,103 +213,124 @@ export default function QuizQuestionPage() {
           className="flex h-[52px] w-[52px] items-center justify-center rounded-squircle bg-white shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
         >
           <div className="flex gap-0.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-ink" />
-            <span className="h-1.5 w-1.5 rounded-full bg-ink" />
-            <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+            <span className="h-1.5 w-1.5 rounded-full bg-onyx" />
+            <span className="h-1.5 w-1.5 rounded-full bg-onyx" />
+            <span className="h-1.5 w-1.5 rounded-full bg-onyx" />
           </div>
         </button>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <p className="text-[14px] font-bold text-ink">{t("quiz.progress")}</p>
-          <p className="text-[14px] font-bold text-ink">{progressPct}%</p>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white">
-          <div className="h-full rounded-full bg-ink" style={{ width: `${progressPct}%` }} />
-        </div>
+      {/* Progress: one slim bar only — the fraction is already in the "Soal"
+          chip above, so a separate "Progress · 7%" text row was redundant
+          clutter. */}
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-white/55"
+        role="progressbar"
+        aria-valuenow={progressPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className="h-full rounded-full bg-onyx transition-all" style={{ width: `${progressPct}%` }} />
       </div>
 
-      <div className="flex justify-center py-2">
-        <QuizMascot size={180} />
+      <div className="relative flex justify-center py-1">
+        <div className="absolute h-[148px] w-[148px] rounded-full bg-white/20" aria-hidden="true" />
+        <QuizMascot size={168} className="relative" />
       </div>
 
-      <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1">
-        {QUIZ_CATEGORIES.map((c) => (
-          <span
-            key={c}
-            className={cn(
-              "shrink-0 rounded-pill px-4 py-2 text-[13px] font-bold capitalize",
-              c === question.category
-                ? "bg-ink text-white"
-                : "bg-white text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]",
-            )}
-          >
-            {c}
-          </span>
-        ))}
-      </div>
-
-      <h2 className="text-[21px] font-extrabold leading-[27px] text-ink">
-        {question.question_text}
-      </h2>
-
-      {!myAnswer || retrying ? (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {retrying && (
-            <p className="text-caption text-subtle">
-              {t("quiz.retryingNote")}
-            </p>
-          )}
-          <div className="relative">
-            <input
-              autoFocus
-              type="text"
-              placeholder={t("quiz.answerPlaceholder")}
-              value={answerText}
-              onChange={(e) => setAnswerText(e.target.value)}
-              className="h-[58px] w-full rounded-pill bg-white pl-6 pr-16 text-body text-ink placeholder:text-subtle shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)] focus:outline-none"
-            />
-            <span className="absolute right-[15px] top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[9.8px] bg-coral shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
-              <Info size={14} className="text-white" />
+      <div
+        className="flex items-center gap-2 overflow-x-auto pb-1"
+        style={{ maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE }}
+      >
+        {QUIZ_CATEGORIES.map((c) => {
+          const style = CATEGORY_STYLES[c] ?? DEFAULT_CATEGORY_STYLE;
+          const selected = c === question.category;
+          return (
+            <span
+              key={c}
+              className={cn(
+                "shrink-0 rounded-pill px-3.5 py-2 text-[12.5px] font-bold capitalize",
+                selected ? cn(style.pillBg, "text-white shadow-sm") : cn("bg-white/85", style.pillText),
+              )}
+            >
+              {c}
             </span>
-          </div>
+          );
+        })}
+      </div>
 
-          {error && <p className="text-caption text-error">{error}</p>}
-
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (retrying) {
-                  setRetrying(false);
-                  setError(null);
-                } else {
-                  router.push("/notes/quiz");
-                }
-              }}
-              className="flex h-[58px] flex-1 items-center justify-center gap-1 rounded-pill bg-white text-[13.5px] font-bold text-ink shadow-[0px_6px_18px_0px_rgba(77,51,77,0.1)]"
-            >
-              {retrying ? t("quiz.cancel") : t("quiz.skip")}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex h-[58px] flex-1 items-center justify-center gap-1 rounded-pill bg-ink text-[13.5px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
-            >
-              {submitting ? t("quiz.sending") : t("quiz.send")}
-              {!submitting && <ChevronRight size={16} />}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="flex flex-col items-center gap-2 rounded-card-lg bg-white p-6 text-center shadow-sm">
-          <p className="text-card-title text-ink">{t("quiz.submitted")}</p>
-          <p className="text-body-medium text-muted">
-            {t("quiz.waitingPartner")}
+      {/* Everything below sits on a solid white card — guarantees legible,
+          identical contrast in both light and dark mode, and gives the flat
+          orange background some depth instead of text floating directly on it. */}
+      <div className="flex flex-col gap-4 rounded-[28px] bg-white p-5 shadow-[0px_10px_28px_0px_rgba(77,51,77,0.14)]">
+        <div className="flex items-center gap-2">
+          <span className={cn("h-2 w-2 rounded-full", categoryStyle.dot)} aria-hidden="true" />
+          <p className={cn("text-[12px] font-bold uppercase tracking-wide", categoryStyle.pillText)}>
+            {question.category}
           </p>
         </div>
-      )}
+
+        <h2 className="text-[20px] font-extrabold leading-[27px] text-onyx">
+          {question.question_text}
+        </h2>
+
+        {!myAnswer || retrying ? (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {retrying && (
+              <p className="text-caption text-onyx/55">
+                {t("quiz.retryingNote")}
+              </p>
+            )}
+            <div className="relative">
+              <input
+                autoFocus
+                type="text"
+                placeholder={t("quiz.answerPlaceholder")}
+                value={answerText}
+                onChange={(e) => setAnswerText(e.target.value)}
+                className="h-[56px] w-full rounded-pill border border-onyx/10 bg-[#f6f1ec] pl-6 pr-16 text-body text-onyx placeholder:text-onyx/40 focus:outline-none"
+              />
+              <span className="absolute right-[15px] top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[9.8px] bg-coral shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]">
+                <Info size={14} className="text-white" />
+              </span>
+            </div>
+
+            {error && <p className="text-caption text-error">{error}</p>}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (retrying) {
+                    setRetrying(false);
+                    setError(null);
+                  } else {
+                    router.push("/notes/quiz");
+                  }
+                }}
+                className="flex h-[54px] flex-1 items-center justify-center gap-1 rounded-pill bg-[#f6f1ec] text-[13.5px] font-bold text-onyx"
+              >
+                {retrying ? t("quiz.cancel") : t("quiz.skip")}
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex h-[54px] flex-1 items-center justify-center gap-1 rounded-pill bg-onyx text-[13.5px] font-bold text-white shadow-[0px_8px_20px_0px_rgba(26,13,26,0.28)] disabled:opacity-60"
+              >
+                {submitting ? t("quiz.sending") : t("quiz.send")}
+                {!submitting && <ChevronRight size={16} />}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-card-lg bg-[#f6f1ec] p-6 text-center">
+            <p className="text-card-title text-onyx">{t("quiz.submitted")}</p>
+            <p className="text-body-medium text-onyx/60">
+              {t("quiz.waitingPartner")}
+            </p>
+          </div>
+        )}
+      </div>
 
       <ActionSheet
         open={optionsOpen}
