@@ -98,6 +98,10 @@ export const dictionary = {
   "newEntry.addTag": { id: "Tambah tag", en: "Add tag" },
   "newEntry.photoPreviewAlt": { id: "Pratinjau foto", en: "Photo preview" },
   "newEntry.someone": { id: "Seseorang", en: "Someone" },
+  "newEntry.customTagPlaceholder": { id: "Nama tag baru...", en: "New tag name..." },
+  "newEntry.removeTag": { id: "Hapus tag {tag}", en: "Remove tag {tag}" },
+  "newEntry.confirmTag": { id: "Tambah tag ini", en: "Add this tag" },
+  "newEntry.cancelTag": { id: "Batalkan", en: "Cancel" },
 
   // Notes & Quiz Hub
   "notesHub.title": { id: "Notes & Quiz", en: "Notes & Quiz" },

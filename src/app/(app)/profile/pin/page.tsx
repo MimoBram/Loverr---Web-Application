@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useSession } from "@/lib/session";
 import { useT } from "@/lib/i18n";
+import { errorMessage } from "@/lib/utils";
 
 export default function ChangePinPage() {
   const router = useRouter();
@@ -42,8 +43,7 @@ export default function ChangePinPage() {
       ok = await updatePin(activeProfileId, oldPin, newPin);
     } catch (err) {
       console.error("updatePin failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setError(t("changePin.errorGeneric") + detail);
+      setError(`${t("changePin.errorGeneric")} (${errorMessage(err)})`);
       return;
     }
     if (!ok) {

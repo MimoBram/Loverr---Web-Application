@@ -16,6 +16,7 @@ import { getMoodEmoji } from "@/lib/moods";
 import { ActionSheet, type ActionSheetItem } from "@/components/ui/ActionSheet";
 import { ConfirmSheet } from "@/components/ui/ConfirmSheet";
 import { useT, useLanguage } from "@/lib/i18n";
+import { errorMessage } from "@/lib/utils";
 import type { ScrapbookEntry } from "@/lib/supabase/types";
 
 const CARD_COLORS = ["bg-coral", "bg-violet", "bg-periwinkle"] as const;
@@ -65,9 +66,8 @@ export default function EntryDetailPage() {
       router.push("/timeline");
     } catch (err) {
       console.error("deleteEntry failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setShareStatus(t("entryDetail.deleteError") + detail);
-      setTimeout(() => setShareStatus(null), 4000);
+      setShareStatus(`${t("entryDetail.deleteError")} (${errorMessage(err)})`);
+      setTimeout(() => setShareStatus(null), 5000);
       setDeleting(false);
       setConfirmOpen(false);
     }

@@ -28,3 +28,25 @@ export function toLocalDateKey(input: Date | string): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+/**
+ * Extracts a human-readable message from anything a `catch` block might
+ * receive. Supabase's `PostgrestError`/`AuthError` are plain objects with a
+ * `.message` string — NOT instances of the native `Error` class — so a bare
+ * `err instanceof Error` check silently misses them and drops the real
+ * reason on the floor. This checks for a `.message` string on any object
+ * before falling back to `String(err)`, so real backend errors ("row
+ * violates row-level security policy", "JWT expired", etc.) always surface.
+ */
+export function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (
+    err &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
+  ) {
+    return (err as { message: string }).message;
+  }
+  return String(err);
+}

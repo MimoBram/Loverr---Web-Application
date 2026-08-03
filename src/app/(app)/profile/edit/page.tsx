@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
-import { cn } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
 import { useSession } from "@/lib/session";
 import { useT } from "@/lib/i18n";
 
@@ -38,8 +38,7 @@ export default function EditProfilePage() {
       setTimeout(() => router.push("/profile"), 600);
     } catch (err) {
       console.error("updateProfile failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setError(t("editProfile.saveError") + detail);
+      setError(`${t("editProfile.saveError")} (${errorMessage(err)})`);
     }
   }
 

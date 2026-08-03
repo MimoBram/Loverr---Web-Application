@@ -8,7 +8,7 @@ import { createEntry, updateEntry, uploadEntryPhoto, getEntry } from "@/lib/data
 import { createNotification } from "@/lib/data/notifications";
 import { resolveCoupleId } from "@/lib/data/auth";
 import { MOODS } from "@/lib/moods";
-import { cn } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
 import { useT, useLanguage } from "@/lib/i18n";
 
 const PRESET_TAGS = ["Liburan", "Momen Spesial", "Harian", "Kejutan"];
@@ -42,7 +42,10 @@ function NewEntryInner() {
     "Liburan",
     "Momen Spesial",
   ]);
-  const [visibleTags, setVisibleTags] = useState(PRESET_TAGS.slice(0, 2));
+  const [visibleTags, setVisibleTags] = useState<string[]>(PRESET_TAGS);
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagText, setNewTagText] = useState("");
+  const newTagInputRef = useRef<HTMLInputElement>(null);
   const [mood, setMood] = useState<string | null>("senang");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -89,9 +92,32 @@ function NewEntryInner() {
     );
   }
 
-  function addMoreTags() {
-    const next = PRESET_TAGS.filter((t) => !visibleTags.includes(t));
-    if (next.length > 0) setVisibleTags((prev) => [...prev, next[0]]);
+  function removeTag(tag: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setVisibleTags((prev) => prev.filter((t) => t !== tag));
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
+  }
+
+  function startAddingTag() {
+    setAddingTag(true);
+    setNewTagText("");
+    // Focus happens after the input mounts.
+    setTimeout(() => newTagInputRef.current?.focus(), 0);
+  }
+
+  function commitNewTag() {
+    const trimmed = newTagText.trim();
+    if (trimmed && !visibleTags.includes(trimmed)) {
+      setVisibleTags((prev) => [...prev, trimmed]);
+      setSelectedTags((prev) => [...prev, trimmed]);
+    }
+    setNewTagText("");
+    setAddingTag(false);
+  }
+
+  function cancelAddingTag() {
+    setNewTagText("");
+    setAddingTag(false);
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -174,8 +200,7 @@ function NewEntryInner() {
       }
     } catch (err) {
       console.error("createEntry/updateEntry failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setError(t("newEntry.error") + detail);
+      setError(`${t("newEntry.error")} (${errorMessage(err)})`);
       setSaving(false);
     }
   }
@@ -262,30 +287,77 @@ function NewEntryInner() {
 
       <div className="flex flex-col gap-3">
         <p className="text-[13.5px] font-bold text-subtle">{t("newEntry.tagsLabel")}</p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {visibleTags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => toggleTag(tag)}
-              className={cn(
-                "h-[38px] rounded-pill px-4 text-[13.5px] font-semibold",
-                selectedTags.includes(tag)
-                  ? "bg-onyx text-white"
-                  : "border border-divider bg-card text-ink",
-              )}
-            >
-              {tag}
-            </button>
+            <span key={tag} className="relative inline-flex">
+              <button
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={cn(
+                  "h-[38px] rounded-pill px-4 text-[13.5px] font-semibold",
+                  selectedTags.includes(tag)
+                    ? "bg-onyx text-white"
+                    : "border border-divider bg-card text-ink",
+                )}
+              >
+                {tag}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => removeTag(tag, e)}
+                aria-label={t("newEntry.removeTag", { tag })}
+                className="absolute -right-1.5 -top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-error text-white shadow-[0px_2px_4px_0px_rgba(38,20,31,0.3)]"
+              >
+                <X size={11} />
+              </button>
+            </span>
           ))}
-          <button
-            type="button"
-            onClick={addMoreTags}
-            aria-label={t("newEntry.addTag")}
-            className="flex h-[38px] w-[38px] items-center justify-center rounded-squircle border border-divider bg-card shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
-          >
-            <Plus size={16} className="text-ink" />
-          </button>
+
+          {addingTag ? (
+            <div className="flex h-[38px] items-center gap-1.5 rounded-pill border border-divider bg-card pl-4 pr-1.5">
+              <input
+                ref={newTagInputRef}
+                type="text"
+                value={newTagText}
+                onChange={(e) => setNewTagText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitNewTag();
+                  } else if (e.key === "Escape") {
+                    cancelAddingTag();
+                  }
+                }}
+                placeholder={t("newEntry.customTagPlaceholder")}
+                className="w-32 bg-transparent text-[13.5px] font-semibold text-ink placeholder:text-subtle focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={commitNewTag}
+                aria-label={t("newEntry.confirmTag")}
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-onyx text-white"
+              >
+                <Plus size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={cancelAddingTag}
+                aria-label={t("newEntry.cancelTag")}
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-surface text-ink"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={startAddingTag}
+              aria-label={t("newEntry.addTag")}
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-squircle border border-divider bg-card shadow-[0px_3px_6px_0px_rgba(38,20,31,0.22)]"
+            >
+              <Plus size={16} className="text-ink" />
+            </button>
+          )}
         </div>
       </div>
 

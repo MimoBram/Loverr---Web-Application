@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session";
 import { createNote, listNotes } from "@/lib/data/notes";
 import { createNotification } from "@/lib/data/notifications";
 import { useT } from "@/lib/i18n";
+import { errorMessage } from "@/lib/utils";
 import type { Note } from "@/lib/supabase/types";
 
 function ExclaimIcon({ className }: { size?: number; className?: string }) {
@@ -71,8 +72,7 @@ export default function NoteComposePage() {
       router.push("/notes");
     } catch (err) {
       console.error("createNote failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setError(t("noteCompose.error") + detail);
+      setError(`${t("noteCompose.error")} (${errorMessage(err)})`);
       setSaving(false);
     }
   }

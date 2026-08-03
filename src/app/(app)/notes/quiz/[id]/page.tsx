@@ -9,7 +9,7 @@ import { createNotification } from "@/lib/data/notifications";
 import { QUIZ_CATEGORIES } from "@/lib/mock-data";
 import { QuizMascot } from "@/components/ui/QuizMascot";
 import { ActionSheet, type ActionSheetItem } from "@/components/ui/ActionSheet";
-import { cn } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 import type { QuizQuestion, QuizAnswer } from "@/lib/supabase/types";
 
@@ -116,8 +116,7 @@ export default function QuizQuestionPage() {
       await load();
     } catch (err) {
       console.error("submitAnswer failed:", err);
-      const detail = err instanceof Error ? ` (${err.message})` : "";
-      setError(t("quiz.error") + detail);
+      setError(`${t("quiz.error")} (${errorMessage(err)})`);
       setSubmitting(false);
     }
   }
